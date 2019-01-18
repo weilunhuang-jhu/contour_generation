@@ -6,6 +6,7 @@ Created on Fri Jan 18 15:50:35 2019
 @author: weilunhuang
 """
 import euclid
+from pyglet.gl import gl
 
 class IntersectionInfo(object):
     
@@ -49,7 +50,17 @@ class Ray_cast(object):
         #pass
         x=2*mouse_x/w-1;
         y=2*mouse_y/h-1;
-        #return ray;
+        vector=euclid.Vector3(x,y,-1);
+        M_proj=(gl.GLfloat*16)();
+        M_modelview=(gl.GLfloat*16)();
+        gl.glGetFloatv(gl.GL_PROJECTION_MATRIX,M_proj);
+        gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX,M_modelview);
+        M_proj=euclid.Matrix4.new(*(list(M_proj)));
+        M_modelview=euclid.Matrix4.new(*(list(M_modelview)));
+        vector=M_modelview.inverse()*M_proj.inverse()*vector;
+        vector=vector.normalized(); 
+        ray=euclid.Ray3(euclid.Point3(M_modelview.inverse()[12],M_modelview.inverse()[13],M_modelview.inverse()[14]),vector);
+        return ray;
     def intersect(self,ray,iInfo):
         #pass
         mx=-1;

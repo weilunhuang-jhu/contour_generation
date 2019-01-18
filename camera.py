@@ -14,9 +14,9 @@ from pyglet.gl import glu
 class Camera(object):
     """ A camera.
     """
-    def __init__(self,eye=euclid.Vector3(0,10,10),\
-                 direction=euclid.Vector3(0,-1,-1),\
-                 up=euclid.Vector3(0,1,-1)):
+    def __init__(self,eye=euclid.Vector3(0,0,5),\
+                 direction=euclid.Vector3(0,0,-1),\
+                 up=euclid.Vector3(0,1,0)):
         self.eye=eye;
         self.direction=direction.normalized();
         self.up=up.normalized();

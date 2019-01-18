@@ -224,15 +224,27 @@ class Window(pyglet.window.Window):
         def on_mouse_press(x, y, button, modifiers):
             if self.mode=="draw":
                 w,h=self.get_size();
-                print(w)
-                print(h)
-                print(x)
-                print(y)
-#                ray_casting=Ray_cast(self.current_model);
-#                ray=ray_casting.build_ray(x,y,button,w,h);
-#                iInfo=IntersectionInfo();
-#                if ray_casting.intersect(ray,iInfo):
-#                    print(iInfo.icoordinate);
+#                M_proj=(gl.GLfloat*16)();
+#                M_modelview=(gl.GLfloat*16)();
+#                gl.glGetFloatv(gl.GL_PROJECTION_MATRIX,M_proj);
+#                gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX,M_modelview);
+#                M_proj=euclid.Matrix4.new(*(list(M_proj)));
+#                M_modelview=euclid.Matrix4.new(*(list(M_modelview)));
+#                print(M_proj);
+#                print(M_modelview);
+#                print(M_modelview.inverse());
+                
+                #print(self.current_model.triangles);
+                
+#                print(w)
+#                print(h)
+#                print(x)
+#                print(y)
+                ray_casting=Ray_cast(self.current_model);
+                ray=ray_casting.build_ray(x,y,button,w,h);
+                iInfo=IntersectionInfo();
+                if ray_casting.intersect(ray,iInfo):
+                    print(iInfo.icoordinate);
 
 # creates the window and sets its properties
 window = Window(width=400, height=400, caption='OBJ Viewer', resizable=True)
