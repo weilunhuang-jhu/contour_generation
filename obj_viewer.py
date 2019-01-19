@@ -99,16 +99,15 @@ class OBJModel:
                         else:
                             self.triangle_indices.extend((int(vi_1) - 1, int(vi_2) - 1, int(vi_3) - 1))
         points_indices=[];
-        for i in range(len(self.quad_indices)):
-            points_indices.append(self.quad_indices[i]);
-            if i%4==3:
-                p1=euclid.Point3(self.vertices[points_indices[0]],self.vertices[points_indices[0]+1],self.vertices[points_indices[0]+2]);
-                p2=euclid.Point3(self.vertices[points_indices[1]],self.vertices[points_indices[1]+1],self.vertices[points_indices[1]+2]);
-                p3=euclid.Point3(self.vertices[points_indices[2]],self.vertices[points_indices[2]+1],self.vertices[points_indices[2]+2]);
-                p4=euclid.Point3(self.vertices[points_indices[3]],self.vertices[points_indices[3]+1],self.vertices[points_indices[3]+2]);
-                self.triangles.append(Triangle(p1,p2,p3));
-                self.triangles.append(Triangle(p3,p4,p1));
-                points_indices.clear();
+        for i in range(len(self.quad_indices)//4):
+            points_indices.extend((self.quad_indices[4*i],self.quad_indices[4*i+1],self.quad_indices[4*i+2],self.quad_indices[4*i+3]));
+            p1=euclid.Point3(self.vertices[3*points_indices[0]],self.vertices[3*points_indices[0]+1],self.vertices[3*points_indices[0]+2]);
+            p2=euclid.Point3(self.vertices[3*points_indices[1]],self.vertices[3*points_indices[1]+1],self.vertices[3*points_indices[1]+2]);
+            p3=euclid.Point3(self.vertices[3*points_indices[2]],self.vertices[3*points_indices[2]+1],self.vertices[3*points_indices[2]+2]);
+            p4=euclid.Point3(self.vertices[3*points_indices[3]],self.vertices[3*points_indices[3]+1],self.vertices[3*points_indices[3]+2]);
+            self.triangles.append(Triangle(p1,p2,p3));
+            self.triangles.append(Triangle(p3,p4,p1));
+            points_indices.clear();
         points_indices.clear();
         for i in range(len(self.triangle_indices)):
             points_indices.append(self.triangle_indices[i]);
@@ -233,17 +232,21 @@ class Window(pyglet.window.Window):
 #                print(M_proj);
 #                print(M_modelview);
 #                print(M_modelview.inverse());
-                
-                #print(self.current_model.triangles);
+#                for triangle in self.current_model.triangles: 
+#                    print(triangle.vertices);
                 
 #                print(w)
 #                print(h)
 #                print(x)
 #                print(y)
+
                 ray_casting=Ray_cast(self.current_model);
                 ray=ray_casting.build_ray(x,y,button,w,h);
+                print(ray)
                 iInfo=IntersectionInfo();
-                if ray_casting.intersect(ray,iInfo):
+                (isIntersect,iInfo)=ray_casting.intersect(ray);
+                if isIntersect:
+                    print("iInfo in outest loop")
                     print(iInfo.icoordinate);
 
 # creates the window and sets its properties
