@@ -106,6 +106,9 @@ class Ray_cast(object):
             self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
         return (mx>-1,iInfo);
     def line_intersect(self,ray1,ray2):
+        """
+            find intersection point between two lines
+        """
         iInfo=IntersectionInfo();
         small_num=0.000001;
         den=ray2.v.cross(ray1.v);
@@ -116,20 +119,33 @@ class Ray_cast(object):
             num=ray2.v.cross(g);
             n=num.magnitude();
             if(num.dot(den)>0):
+                pass;
                 
         
         
     def connect(self,iInfo1,iInfo2):
+        """
+            find connecting points along surface
+        """
         v12=iInfo2.icoordinate-iInfo1.icoordinate;
-        #v21=iInfo1.icoordinate-iInfo2.icoordinate;
+        #get projected vector of v12 on plane1
         v_plane1=v12-v12.dot(iInfo1.normal)/iInfo1.normal.magnitude_squared()*iInfo1.normal;
-        #v_plane2=v21-v21.dot(iInfo2.normal)/iInfo2.normal.magnitude_squared()*iInfo2.normal;
         v_plane1.normalize();
-        #v_plane2.normalize();
+        #build ray with projected vector
         ray1=euclid.Ray3(iInfo1.icoordinate,v_plane1);
-        #ray2=euclid.Ray3(iInfo2.icoordinate,v_plane2);
+        
+        iInfo=IntersectionInfo();
         while(iInfo1.triangleID!=iInfo2.triangleID):
+            t=-1;
             triangle=self.model.triangles[iInfo1.triangleID];
+            rays=[euclid.Ray3(triangle.vertices[1],triangle.vertices[0]),\
+                  euclid.Ray3(triangle.vertices[2],triangle.vertices[1]),\
+                  euclid.Ray3(triangle.vertices[0],triangle.vertices[2])]
+            for r in rays:
+                t_temp,iInfo_temp=line_intersect(ray1,r);
+                if t_temp>t:
+                    iInfo=iInfo_temp;
+                    t=t_temp;
             
     def spline(self):
         pass;    

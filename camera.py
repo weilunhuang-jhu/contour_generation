@@ -7,77 +7,25 @@ Created on Fri Jan 18 15:44:54 2019
 """
 import euclid
 import pyglet
+import math
 from pyglet.gl import gl
 from pyglet.gl import glu
 
-###fix camera eye, direction, up and use matrix multiplication to change camera view
-class Camera(object):
-    """ A camera.
-    """
-    def __init__(self,eye=euclid.Vector3(0,0,5),\
-                 direction=euclid.Vector3(0,0,-1),\
-                 up=euclid.Vector3(0,1,0)):
-        self.eye=eye;
-        self.direction=direction.normalized();
-        self.up=up.normalized();
-        self.right=self.direction.cross(self.up).normalized();
-        self.tx,self.ty,self.tz,self.rx,self.ry,self.rz=0,0,0,0,0,0;
-        
-    def view(self):
-        """ Adjust window size.
-        """
-        # sets the model view
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity();
-        glu.gluLookAt(self.eye[0],self.eye[1],self.eye[2],\
-                      self.eye[0]+self.direction[0],self.eye[1]+self.direction[1],self.eye[2]+self.direction[2],\
-                      self.up[0],self.up[1],self.up[2])
-        
-    def translate(self,dx, dy, button):
-        #move right and up
-        if button == pyglet.window.mouse.LEFT:
-            delta_x=self.right[0]*dx/20+self.up[0]*dy/20;
-            delta_y=self.right[1]*dx/20+self.up[1]*dy/20;
-            delta_z=self.right[2]*dx/20+self.up[2]*dy/20;
-            self.tx+=delta_x;
-            self.ty+=delta_y;
-            self.tz+=delta_z;
-            gl.glTranslatef(-delta_x,-delta_y,-delta_z);
-
-    def zoom(self,scroll_y):
-        #zoom in and out
-        delta_x=self.direction[0]* scroll_y / 10.0;
-        delta_y=self.direction[1]* scroll_y / 10.0;
-        delta_z=self.direction[2]* scroll_y / 10.0;
-        self.tx += delta_x;
-        self.ty += delta_y;
-        self.tz += delta_z;
-        gl.glTranslatef(delta_x,delta_y,delta_z);
-        
-    def rotate(self,dx, dy, button):
-        if button == pyglet.window.mouse.RIGHT:
-            delta_rx=-dy/10;
-            delta_ry=dx/10;
-            self.rx+=delta_rx;
-            self.ry+=delta_ry;
-            gl.glRotatef(-delta_rx,1,0,0);
-            gl.glRotatef(-delta_ry,0,1,0);
-
-###modify camera eye, direction, up to change camera view
-
+####modify camera eye, direction, up to change camera view
+#
 #class Camera(object):
 #    """ A camera.
 #    """
-#    def __init__(self,eye=euclid.Vector3(0,10,10),\
-#                 direction=euclid.Vector3(0,-1,-1),\
-#                 up=euclid.Vector3(0,-1,1)):
+#    def __init__(self,eye=euclid.Vector3(0,0,5),\
+#                 direction=euclid.Vector3(0,0,-1),\
+#                 up=euclid.Vector3(0,1,0)):
 #        self.eye=eye;
-#        self.direction=direction.normalized();
+#        self.direction=direction.normalize();
 #        self.up=up.normalized();
-#        self.right=self.direction.cross(self.up).normalized();
-#        self.angle_up=0;
-#        self.angle_right=0;
-#        self.rotation_center=euclid.Vector3(0,0,0);
+#        self.right=self.direction.cross(self.up).normalize();
+#        self.pitch=0;
+#        self.yaw=-90;
+#        self.rotation_center=euclid.Point3(0,0,0);
 #        
 #    def view(self):
 #        """ Adjust window size.
@@ -102,7 +50,7 @@ class Camera(object):
 #        self.view();
 #    def rotate(self,dx, dy, button):
 #        
-#        if button == pyglet.window.mouse.LEFT:
+#        if button == pyglet.window.mouse.RIGHT:
 #            self.angle_up+=dx/5;
 #            self.angle_right-=dy/5;
 #            ## rotate about up direction
@@ -111,20 +59,81 @@ class Camera(object):
 #            self.direction = (self.direction*math.cos(self.angle_up) - self.right*math.sin(self.angle_up)).normalized();
 #            self.right = (self.right*math.cos(self.angle_up)+ old_direction*math.sin(self.angle_up)).normalized();
 #            #update self.eye        	
-#            r = self.eye-self.rotation_center;
-#            radius=r.magnitude();
-#            r=r.normalized();
-#        	v = self.up.cross(r).normalized();
-#        	r_updated = (r*math.cos(self.angle_up) + v*math.sin(self.angle_right)).unit();
-#        	this->position = center+ r_updated*radius;
+##            r = self.eye-self.rotation_center;
+##            radius=r.magnitude();
+##            r=r.normalized();
+##            v = self.up.cross(r).normalize();
+##            r_updated = (r*math.cos(self.angle_up) + v*math.sin(self.angle_right)).unit();
+##        	this->position = center+ r_updated*radius;
+#            self.view();
+
+###fix camera eye, direction, up and use matrix multiplication to change camera view
+class Camera(object):
+    """ A camera.
+    """
+    def __init__(self,eye=euclid.Vector3(0,0,5),\
+                 direction=euclid.Vector3(0,0,-1),\
+                 up=euclid.Vector3(0,1,0)):
+        self.eye=eye;
+        self.direction=direction.normalized();
+        self.up=up.normalized();
+        self.right=self.direction.cross(self.up).normalized();
+        #self.tx,self.ty,self.tz,self.rx,self.ry,self.rz=0,0,0,0,0,0;
+        
+    def view(self):
+        """ Adjust window size.
+        """
+        # sets the model view
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity();
+        glu.gluLookAt(self.eye[0],self.eye[1],self.eye[2],\
+                      self.eye[0]+self.direction[0],self.eye[1]+self.direction[1],self.eye[2]+self.direction[2],\
+                      self.up[0],self.up[1],self.up[2])
+        
+    def translate(self,dx, dy, button):
+        #move right and up
+        if button == pyglet.window.mouse.LEFT:
+            delta_x=self.right[0]*dx/20+self.up[0]*dy/20;
+            delta_y=self.right[1]*dx/20+self.up[1]*dy/20;
+            delta_z=self.right[2]*dx/20+self.up[2]*dy/20;
+            gl.glTranslatef(-delta_x,-delta_y,-delta_z);
+#            M_modelview=(gl.GLfloat*16)();
+#            gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX,M_modelview);
+#            M_modelview=euclid.Matrix4.new(*(list(M_modelview)));
+#            M_modelview_inversed=M_modelview.inverse();
+#            self.eye=euclid.Point3(M_modelview_inversed[12],M_modelview_inversed[13],M_modelview_inversed[14]);
+#            self.view();
+    def zoom(self,scroll_y):
+        #zoom in and out
+        delta_x=self.direction[0]* scroll_y / 10.0;
+        delta_y=self.direction[1]* scroll_y / 10.0;
+        delta_z=self.direction[2]* scroll_y / 10.0;
+        gl.glTranslatef(delta_x,delta_y,delta_z);
+#        M_modelview=(gl.GLfloat*16)();
+#        gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX,M_modelview);
+#        M_modelview=euclid.Matrix4.new(*(list(M_modelview)));
+#        M_modelview_inversed=M_modelview.inverse();
+#        self.eye=euclid.Point3(M_modelview_inversed[12],M_modelview_inversed[13],M_modelview_inversed[14]);
 #        self.view();
-#        
-#        
-##    def apply(self):
-##        """ Apply camera transformation.
-##        """
-##        gl.glLoadIdentity()
-##        gl.glRotatef(self.rx, 1, 0, 0)
-##        gl.glRotatef(self.ry, 0, 1, 0)
-##        gl.glRotatef(self.rz, 0, 0, 1)
+    def rotate(self,dx, dy, button):
+        if button == pyglet.window.mouse.RIGHT:
+            delta_rx=-dy/10;
+            delta_ry=dx/10;
+#            M_modelview=(gl.GLfloat*16)();
+#            gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX,M_modelview);
+#            M_modelview=euclid.Matrix4.new(*(list(M_modelview)));
+#            M_modelview_inversed=M_modelview.inverse();
+#            print("origin:")
+#            print(M_modelview_inversed)
+            gl.glRotatef(-delta_rx,1,0,0);
+            gl.glRotatef(-delta_ry,0,1,0);
+#            M_modelview=(gl.GLfloat*16)();
+#            gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX,M_modelview);
+#            M_modelview=euclid.Matrix4.new(*(list(M_modelview)));
+#            M_modelview_inversed=M_modelview.inverse();
+#            print("after:")
+#            print(M_modelview_inversed)
+#            self.direction=euclid.Vector3(M_modelview_inversed[0],M_modelview_inversed[1],M_modelview_inversed[2]).normalize();
+#            self.up=euclid.Vector3()
+#            self.view();
 

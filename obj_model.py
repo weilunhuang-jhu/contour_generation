@@ -1,22 +1,18 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Created on Tue Jan 08 2019
+Created on Fri Jan 25 23:02:04 2019
 
 @author: weilunhuang
 """
-import os
-import pyglet
 import euclid
-from camera import Camera
-from ray import IntersectionInfo
+import pyglet
 from ray import Triangle
-from ray import Ray_cast
 from pyglet.gl import gl
-from pyglet.gl import glu
 
 # colors
 black = (0, 0, 0, 1)
 dark_gray = (0.75, 0.75, 0.75, 1)
-
 class OBJModel:
     """
     Represents an OBJ model.
@@ -109,15 +105,15 @@ class OBJModel:
             self.triangles.append(Triangle(p3,p4,p1));
             points_indices.clear();
         points_indices.clear();
-        for i in range(len(self.triangle_indices)):
-            points_indices.append(self.triangle_indices[i]);
-            if i%4==2:
-                p1=euclid.Point3(self.vertices[points_indices[0]],self.vertices[points_indices[0]+1],self.vertices[points_indices[0]+2]);
-                p2=euclid.Point3(self.vertices[points_indices[1]],self.vertices[points_indices[1]+1],self.vertices[points_indices[1]+2]);
-                p3=euclid.Point3(self.vertices[points_indices[2]],self.vertices[points_indices[2]+1],self.vertices[points_indices[2]+2]);
-                self.triangles.append(Triangle(p1,p2,p3));
-                points_indices.clear();
-            
+        for i in range(len(self.triangle_indices)//3):
+            points_indices.extend((self.triangle_indices[3*i],self.triangle_indices[3*i+1],self.triangle_indices[3*i+2]));
+            p1=euclid.Point3(self.vertices[3*points_indices[0]],self.vertices[3*points_indices[0]+1],self.vertices[3*points_indices[0]+2]);
+            p2=euclid.Point3(self.vertices[3*points_indices[1]],self.vertices[3*points_indices[1]+1],self.vertices[3*points_indices[1]+2]);
+            p3=euclid.Point3(self.vertices[3*points_indices[2]],self.vertices[3*points_indices[2]+1],self.vertices[3*points_indices[2]+2]);
+            self.triangles.append(Triangle(p1,p2,p3));
+            points_indices.clear();
+    def subdivision(self):
+        pass;
     def draw(self):
         
         gl.glPushMatrix();
@@ -144,113 +140,3 @@ class OBJModel:
         # draws the triangles
         pyglet.graphics.draw_indexed(len(self.vertices) // 3, gl.GL_TRIANGLES, self.triangle_indices,('v3f', self.vertices))
         gl.glPopMatrix();        
-    
-            
-class Window(pyglet.window.Window):
-    def __init__(self, width, height, caption, resizable=False):
-        pyglet.window.Window.__init__(self, width=width, height=height, caption=caption, resizable=resizable)
-
-        # sets the background color
-        gl.glClearColor(*black)
-
-        # pre-loaded models
-        self.model_names = ['box.obj', 'uv_sphere.obj', 'monkey.obj','part.obj']
-        self.models = []
-        for name in self.model_names:
-            self.models.append(OBJModel(x=0.0,y=0.0,z=0.0,color=dark_gray, path=os.path.join('obj', name)))
-        # current model
-        self.model_index = 0
-        self.current_model = self.models[self.model_index]
-        # mode: view mode and draw mode
-        default_mode="view";
-        self.mode=default_mode;
-        
-        self.camera=Camera();
-        
-
-        @self.event
-        def on_resize(width, height):
-            # sets the viewport
-            gl.glViewport(0, 0, width, height)
-            # sets the projection
-            gl.glMatrixMode(gl.GL_PROJECTION)
-            gl.glLoadIdentity()
-            glu.gluPerspective(60, width / float(height), 0.1, 1000)
-            self.camera.view();
-            return pyglet.event.EVENT_HANDLED
-
-        @self.event
-        def on_draw():
-            # clears the screen with the background color
-            gl.glClear(gl.GL_COLOR_BUFFER_BIT)
-            #gl.glLoadIdentity()
-
-            # sets wire-frame mode
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-
-            # draws the current model
-            self.current_model.draw()
-
-        @self.event
-        def on_key_press(symbol, modifiers):
-            # press the LEFT or RIGHT key to change the current model
-            if symbol == pyglet.window.key.RIGHT:
-                # next model
-                self.model_index = (self.model_index + 1) % len(self.model_names)
-                self.current_model = self.models[self.model_index]
-
-            elif symbol == pyglet.window.key.LEFT:
-                # previous model
-                self.model_index = (self.model_index - 1) % len(self.model_names)
-                self.current_model = self.models[self.model_index]
-            # press the F1 or F2 key to switch mode
-            if symbol ==pyglet.window.key.F1:
-                self.mode="view";
-            if symbol==pyglet.window.key.F2:
-                self.mode="draw";
-        
-        @self.event
-        def on_mouse_scroll(x, y, scroll_x, scroll_y):
-            self.camera.zoom(scroll_y);
-
-        @self.event
-        def on_mouse_drag(x, y, dx, dy, button, modifiers):
-            if self.mode=="view":
-                self.camera.translate(dx,dy,button);
-                self.camera.rotate(dx,dy,button);
-        
-        @self.event
-        def on_mouse_press(x, y, button, modifiers):
-            if self.mode=="draw":
-                w,h=self.get_size();
-#                M_proj=(gl.GLfloat*16)();
-#                M_modelview=(gl.GLfloat*16)();
-#                gl.glGetFloatv(gl.GL_PROJECTION_MATRIX,M_proj);
-#                gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX,M_modelview);
-#                M_proj=euclid.Matrix4.new(*(list(M_proj)));
-#                M_modelview=euclid.Matrix4.new(*(list(M_modelview)));
-#                print(M_proj);
-#                print(M_modelview);
-#                print(M_modelview.inverse());
-#                for triangle in self.current_model.triangles: 
-#                    print(triangle.vertices);
-                
-#                print(w)
-#                print(h)
-#                print(x)
-#                print(y)
-
-                ray_casting=Ray_cast(self.current_model);
-                ray=ray_casting.build_ray(x,y,button,w,h);
-                print(ray)
-                iInfo=IntersectionInfo();
-                (isIntersect,iInfo)=ray_casting.intersect(ray);
-                if isIntersect:
-                    print("iInfo in outest loop")
-                    print(iInfo.icoordinate);
-
-# creates the window and sets its properties
-window = Window(width=400, height=400, caption='OBJ Viewer', resizable=True)
-
-# starts the application
-pyglet.app.run()
