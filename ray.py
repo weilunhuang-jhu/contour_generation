@@ -6,7 +6,10 @@ Created on Fri Jan 18 15:50:35 2019
 @author: weilunhuang
 """
 import euclid
+import pyglet
 from pyglet.gl import gl
+
+point_color=(1,1,0,1)
 
 class IntersectionInfo(object):
     
@@ -14,6 +17,7 @@ class IntersectionInfo(object):
         self.icoordinate=None;
         self.normal=None;
         self.texct_coordinate=None;
+        self.triangleID=None;
 
 class Triangle(object):
     
@@ -57,6 +61,7 @@ class Triangle(object):
 class Ray_cast(object):
     def __init__(self,model):
         self.model=model;
+        self.points=[];
     def build_ray(self,mouse_x,mouse_y,button,w,h):
         #viewport coordinates to normalized device coordinates
         x=2*mouse_x/w-1;
@@ -80,14 +85,14 @@ class Ray_cast(object):
         vector_world.normalize();
         print(vector_world);
         print(M_modelview_inversed);
-        #build ray
+        #build ray, starting point is camera eye position
         ray=euclid.Ray3(euclid.Point3(M_modelview_inversed[12],M_modelview_inversed[13],M_modelview_inversed[14]),vector_world);
         return ray;
     def intersect(self,ray):
         iInfo=IntersectionInfo();
         mx=-1;
         iInfo_temp=IntersectionInfo();
-        for triangle in self.model.triangles:
+        for i,triangle in enumerate(self.model.triangles):
             (isIntersect,iInfo_temp)=triangle.intersect(ray);
             if isIntersect:    
                 #print("intersection_temp in outer loop")
@@ -95,9 +100,43 @@ class Ray_cast(object):
                 d=(iInfo_temp.icoordinate-ray.p).magnitude_squared();
                 if mx==-1 or d<mx:
                     iInfo=iInfo_temp;
+                    iInfo.triangleID=i;
                     mx=d;
+        if mx>-1:
+            self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
         return (mx>-1,iInfo);
+    def line_intersect(self,ray1,ray2):
+        iInfo=IntersectionInfo();
+        small_num=0.000001;
+        den=ray2.v.cross(ray1.v);
+        d=den.magnitude();
+        #if not paralleled
+        if den>small_num:
+            g=ray2.p-ray1.p;
+            num=ray2.v.cross(g);
+            n=num.magnitude();
+            if(num.dot(den)>0):
                 
         
-    def draw(self,point):
-        pass
+        
+    def connect(self,iInfo1,iInfo2):
+        v12=iInfo2.icoordinate-iInfo1.icoordinate;
+        #v21=iInfo1.icoordinate-iInfo2.icoordinate;
+        v_plane1=v12-v12.dot(iInfo1.normal)/iInfo1.normal.magnitude_squared()*iInfo1.normal;
+        #v_plane2=v21-v21.dot(iInfo2.normal)/iInfo2.normal.magnitude_squared()*iInfo2.normal;
+        v_plane1.normalize();
+        #v_plane2.normalize();
+        ray1=euclid.Ray3(iInfo1.icoordinate,v_plane1);
+        #ray2=euclid.Ray3(iInfo2.icoordinate,v_plane2);
+        while(iInfo1.triangleID!=iInfo2.triangleID):
+            triangle=self.model.triangles[iInfo1.triangleID];
+            
+    def spline(self):
+        pass;    
+    def draw(self):
+        #pass
+        gl.glColor4f(*point_color);
+        pyglet.graphics.draw(len(self.points)//3,gl.GL_POINTS,('v3f',self.points));
+        if len(self.points)//3>1:
+            pyglet.graphics.draw(len(self.points)//3,gl.GL_LINE_STRIP,('v3f',self.points));
+            
