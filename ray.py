@@ -16,12 +16,22 @@ class IntersectionInfo(object):
     def __init__(self):
         self.icoordinate=None;
         self.normal=None;
-        self.texct_coordinate=None;
+        self.text_coordinate=None;
         self.triangleID=None;
+        
+    def copy(self):
+        iInfo=IntersectionInfo();
+        iInfo.icoordinate=self.icoordinate;
+        iInfo.normal=self.normal;
+        iInfo.text_coordinate=self.text_coordinate;
+        iInfo.triangleID=self.triangleID;
+        return iInfo;
+        
 
 class Triangle(object):
     
-    def __init__(self,p1,p2,p3):
+    def __init__(self,i1,i2,i3,p1,p2,p3):
+        self.vertex_indices=[i1,i2,i3];
         self.vertices=[p1,p2,p3]; #list of vertices
         self.plane=euclid.Plane(self.vertices[0],self.vertices[1],self.vertices[2]);
         self.plane.n.normalize();
@@ -62,6 +72,7 @@ class Ray_cast(object):
     def __init__(self,model):
         self.model=model;
         self.points=[];
+        self.iInfos=[];
     def build_ray(self,mouse_x,mouse_y,button,w,h):
         #viewport coordinates to normalized device coordinates
         x=2*mouse_x/w-1;
@@ -103,6 +114,10 @@ class Ray_cast(object):
                     iInfo.triangleID=i;
                     mx=d;
         if mx>-1:
+            
+            if len(self.iInfos)>0:
+                self.connect(self.iInfos[-1],iInfo);
+            self.iInfos.append(iInfo);
             self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
         return (mx>-1,iInfo);
     def line_intersect(self,ray1,ray2):
@@ -115,42 +130,63 @@ class Ray_cast(object):
         d=den.magnitude();
         t=-1;
         #if not paralleled
-        if den>small_num:
+        if d>small_num:
             g=ray2.p-ray1.p;
             num=ray2.v.cross(g);
             n=num.magnitude();
             t=n/d;
-            if(num.dot(den)>0):
-                iInfo.icoordinate=ray1.p+t*ray1.v;
-            else:
-                iInfo.icoordinate=ray1.p-t*ray1.v;
+            if(num.dot(den)<0):
+                t=-t
+            iInfo.icoordinate=ray1.p+t*ray1.v;
         return(t,iInfo);
         
         
-    def connect(self,iInfo1,iInfo2):
+    def connect(self,iInfo_start,iInfo_end):
         """
             find connecting points along surface
         """
-        v12=iInfo2.icoordinate-iInfo1.icoordinate;
-        #get projected vector of v12 on plane1
-        v_plane1=v12-v12.dot(iInfo1.normal)/iInfo1.normal.magnitude_squared()*iInfo1.normal;
-        v_plane1.normalize();
-        #build ray with projected vector
-        ray1=euclid.Ray3(iInfo1.icoordinate,v_plane1);
+        print("start ID is")
+        print(iInfo_start.triangleID)
+        print("end ID is")
+        print(iInfo_end.triangleID)
         
-        iInfo=IntersectionInfo();
-        while(iInfo1.triangleID!=iInfo2.triangleID):
-            t=-1;
-            triangle=self.model.triangles[iInfo1.triangleID];
-            rays=[euclid.Ray3(triangle.vertices[1],triangle.vertices[0]),\
-                  euclid.Ray3(triangle.vertices[2],triangle.vertices[1]),\
-                  euclid.Ray3(triangle.vertices[0],triangle.vertices[2])]
-            for r in rays:
-                t_temp,iInfo_temp=self.line_intersect(ray1,r);
-                if t_temp>t:
-                    iInfo=iInfo_temp;
-                    t=t_temp;
+        iInfo=iInfo_start.copy();
+        counter=0;
+        while(iInfo.triangleID!=iInfo_end.triangleID):
+            counter+=1;
+            v12=iInfo_end.icoordinate-iInfo.icoordinate;
+            #get projected vector of v12 on plane1
+            v_plane1=v12-v12.dot(-iInfo.normal)/iInfo.normal.magnitude_squared()*(-iInfo.normal);
+            v_plane1.normalize();
+            #build ray with projected vector
+            ray_proj=euclid.Ray3(iInfo.icoordinate,v_plane1);
             
+            ##find connecting point
+            t=-1;
+            triangle=self.model.triangles[iInfo.triangleID];
+            rays=[euclid.Ray3(triangle.vertices[0],triangle.vertices[1]),\
+                  euclid.Ray3(triangle.vertices[1],triangle.vertices[2]),\
+                  euclid.Ray3(triangle.vertices[2],triangle.vertices[0])]
+            #iterate edges in triangle, update iInfo1
+            for i,ray in enumerate(rays):
+                (t_temp,iInfo_temp)=self.line_intersect(ray_proj,ray);
+                if t_temp<t or t<0:
+                    iInfo.icoordinate=iInfo_temp.icoordinate;
+                    for j,tri_temp in enumerate(self.model.triangles):
+                        if triangle.vertex_indices[i] in tri_temp.vertex_indices and triangle.vertex_indices[(i+1)%3] in tri_temp.vertex_indices and iInfo.triangleID!=j:
+                            print('j is:')
+                            print(j);
+                            print('originalID is:')
+                            print(iInfo.triangleID);
+                            iInfo.triangleID=j;
+                            iInfo.normal=tri_temp.plane.n;
+                    t=t_temp;
+            print('connecting point'+str(counter));
+            print(iInfo.icoordinate);
+            self.iInfos.append(iInfo);
+            print("inter ID is:")
+            print(iInfo.triangleID)
+            self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
     def spline(self):
         pass;    
     def draw(self):

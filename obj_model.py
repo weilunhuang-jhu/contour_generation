@@ -96,21 +96,26 @@ class OBJModel:
                             self.triangle_indices.extend((int(vi_1) - 1, int(vi_2) - 1, int(vi_3) - 1))
         points_indices=[];
         for i in range(len(self.quad_indices)//4):
+            #put all indices for a quad into points-indices, and then separate it into 2 triangles
             points_indices.extend((self.quad_indices[4*i],self.quad_indices[4*i+1],self.quad_indices[4*i+2],self.quad_indices[4*i+3]));
             p1=euclid.Point3(self.vertices[3*points_indices[0]],self.vertices[3*points_indices[0]+1],self.vertices[3*points_indices[0]+2]);
             p2=euclid.Point3(self.vertices[3*points_indices[1]],self.vertices[3*points_indices[1]+1],self.vertices[3*points_indices[1]+2]);
             p3=euclid.Point3(self.vertices[3*points_indices[2]],self.vertices[3*points_indices[2]+1],self.vertices[3*points_indices[2]+2]);
             p4=euclid.Point3(self.vertices[3*points_indices[3]],self.vertices[3*points_indices[3]+1],self.vertices[3*points_indices[3]+2]);
-            self.triangles.append(Triangle(p1,p2,p3));
-            self.triangles.append(Triangle(p3,p4,p1));
+            self.triangles.append(Triangle(points_indices[0],points_indices[1],points_indices[2],\
+                                           p1,p2,p3));
+            self.triangles.append(Triangle(points_indices[2],points_indices[3],points_indices[0],\
+                                           p3,p4,p1));
             points_indices.clear();
         points_indices.clear();
         for i in range(len(self.triangle_indices)//3):
+            #put all indices for a triangle into points_indices
             points_indices.extend((self.triangle_indices[3*i],self.triangle_indices[3*i+1],self.triangle_indices[3*i+2]));
             p1=euclid.Point3(self.vertices[3*points_indices[0]],self.vertices[3*points_indices[0]+1],self.vertices[3*points_indices[0]+2]);
             p2=euclid.Point3(self.vertices[3*points_indices[1]],self.vertices[3*points_indices[1]+1],self.vertices[3*points_indices[1]+2]);
             p3=euclid.Point3(self.vertices[3*points_indices[2]],self.vertices[3*points_indices[2]+1],self.vertices[3*points_indices[2]+2]);
-            self.triangles.append(Triangle(p1,p2,p3));
+            self.triangles.append(Triangle(points_indices[0],points_indices[1],points_indices[2],\
+                                           p1,p2,p3));
             points_indices.clear();
     def subdivision(self):
         pass;

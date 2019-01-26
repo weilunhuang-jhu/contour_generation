@@ -127,6 +127,8 @@ class Window(pyglet.window.Window):
                 if isIntersect:
                     print("iInfo in outest loop")
                     print(iInfo.icoordinate);
+                    print("triangleID is")
+                    print(iInfo.triangleID)
                     
 # creates the window and sets its properties
 window = Window(width=400, height=400, caption='Viewer', resizable=True)
