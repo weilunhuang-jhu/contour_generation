@@ -113,14 +113,18 @@ class Ray_cast(object):
         small_num=0.000001;
         den=ray2.v.cross(ray1.v);
         d=den.magnitude();
+        t=-1;
         #if not paralleled
         if den>small_num:
             g=ray2.p-ray1.p;
             num=ray2.v.cross(g);
             n=num.magnitude();
+            t=n/d;
             if(num.dot(den)>0):
-                pass;
-                
+                iInfo.icoordinate=ray1.p+t*ray1.v;
+            else:
+                iInfo.icoordinate=ray1.p-t*ray1.v;
+        return(t,iInfo);
         
         
     def connect(self,iInfo1,iInfo2):
@@ -142,7 +146,7 @@ class Ray_cast(object):
                   euclid.Ray3(triangle.vertices[2],triangle.vertices[1]),\
                   euclid.Ray3(triangle.vertices[0],triangle.vertices[2])]
             for r in rays:
-                t_temp,iInfo_temp=line_intersect(ray1,r);
+                t_temp,iInfo_temp=self.line_intersect(ray1,r);
                 if t_temp>t:
                     iInfo=iInfo_temp;
                     t=t_temp;
