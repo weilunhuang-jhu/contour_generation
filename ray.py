@@ -154,6 +154,8 @@ class Ray_cast(object):
         """
             find connecting points along surface
         """
+        ####note concave and convex cases
+        small_num=0.000001;
         print("start ID is")
         print(iInfo_start.triangleID)
         print("end ID is")
@@ -164,8 +166,13 @@ class Ray_cast(object):
         while(iInfo.triangleID!=iInfo_end.triangleID):
             counter+=1;
             v12=iInfo_end.icoordinate-iInfo.icoordinate;
+#            #test convextiy
+#            convexity=v12.dot(iInfo.normal);
+#            n=iInfo.normal;
+#            if convexity>0:
+#                
             #get projected vector of v12 on plane1
-            v_plane1=v12-v12.dot(-iInfo.normal)/iInfo.normal.magnitude_squared()*(-iInfo.normal);
+            v_plane1=v12-v12.dot(iInfo.normal)/iInfo.normal.magnitude_squared()*(iInfo.normal);
             v_plane1.normalize();
             #build ray with projected vector
             ray_proj=euclid.Ray3(iInfo.icoordinate,v_plane1);
@@ -183,7 +190,7 @@ class Ray_cast(object):
             for i,ray in enumerate(rays):
                 print("ray"+str(i)+":");
                 (t_temp,iInfo_temp)=self.line_intersect(ray_proj,ray);
-                if (t_temp<t and t_temp>0) or t<=0:
+                if (t_temp<t and t_temp>small_num) or t<=0:
                     print("t_temp inside loop is:")
                     print(t_temp)
                     t=t_temp;
@@ -201,6 +208,8 @@ class Ray_cast(object):
                     break;              
             print('t is:')
             print(t)
+            if(t<0):
+                print("error")
             iInfo.triangleID=id_temp;
             iInfo.normal=self.model.triangles[id_temp].plane.n;
             print('connecting point'+str(counter));
