@@ -105,9 +105,9 @@ class Camera(object):
 #            self.view();
     def zoom(self,scroll_y):
         #zoom in and out
-        delta_x=self.direction[0]* scroll_y / 10.0;
-        delta_y=self.direction[1]* scroll_y / 10.0;
-        delta_z=self.direction[2]* scroll_y / 10.0;
+        delta_x=self.direction[0]* scroll_y / 1.0;
+        delta_y=self.direction[1]* scroll_y / 1.0;
+        delta_z=self.direction[2]* scroll_y / 1.0;
         gl.glTranslatef(delta_x,delta_y,delta_z);
 #        M_modelview=(gl.GLfloat*16)();
 #        gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX,M_modelview);

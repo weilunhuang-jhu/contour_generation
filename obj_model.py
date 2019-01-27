@@ -60,7 +60,7 @@ class OBJModel:
                 # every line that begins with a 'v' is a vertex
                 if data[0] == 'v':
                     x, y, z = data[1:4];
-                    self.vertices.extend((float(x), float(y), float(z)));
+                    self.vertices.extend((float(x)*1000, float(y)*1000, float(z)*1000));
                 # every line that begins with a 'vn' is a vertex normal
                 if data[0] == 'vn':
                     x_n, y_n, z_n = data[1:4];

@@ -38,6 +38,9 @@ class Triangle(object):
         self.v1=self.vertices[1]-self.vertices[0];
         self.v2=self.vertices[2]-self.vertices[0];
     def intersect(self,ray):
+        """
+            find intersection between ray and triangle
+        """
         iInfo=IntersectionInfo();
         ray.v.normalize();
         try:
@@ -74,6 +77,9 @@ class Ray_cast(object):
         self.points=[];
         self.iInfos=[];
     def build_ray(self,mouse_x,mouse_y,button,w,h):
+        """
+            build ray: from mouse position to a 3D ray (in world coordinate) starting from camera eye position
+        """
         #viewport coordinates to normalized device coordinates
         x=2*mouse_x/w-1;
         y=2*mouse_y/h-1;
@@ -100,6 +106,9 @@ class Ray_cast(object):
         ray=euclid.Ray3(euclid.Point3(M_modelview_inversed[12],M_modelview_inversed[13],M_modelview_inversed[14]),vector_world);
         return ray;
     def intersect(self,ray):
+        """
+            find intersection between ray and mesh model
+        """
         iInfo=IntersectionInfo();
         mx=-1;
         iInfo_temp=IntersectionInfo();
@@ -129,7 +138,7 @@ class Ray_cast(object):
         den=ray2.v.cross(ray1.v);
         d=den.magnitude();
         t=-1;
-        #if not paralleled
+        #if two lines are not parallel
         if d>small_num:
             g=ray2.p-ray1.p;
             num=ray2.v.cross(g);
@@ -160,6 +169,8 @@ class Ray_cast(object):
             v_plane1.normalize();
             #build ray with projected vector
             ray_proj=euclid.Ray3(iInfo.icoordinate,v_plane1);
+            print("ray_proj is:")
+            print(ray_proj)
             
             ##find connecting point
             t=-1;
@@ -167,20 +178,31 @@ class Ray_cast(object):
             rays=[euclid.Ray3(triangle.vertices[0],triangle.vertices[1]),\
                   euclid.Ray3(triangle.vertices[1],triangle.vertices[2]),\
                   euclid.Ray3(triangle.vertices[2],triangle.vertices[0])]
-            #iterate edges in triangle, update iInfo1
+            #iterate edges in triangle to find closest intersection for ray_proj
+            ray_id=0;
             for i,ray in enumerate(rays):
+                print("ray"+str(i)+":");
                 (t_temp,iInfo_temp)=self.line_intersect(ray_proj,ray);
-                if t_temp<t or t<0:
-                    iInfo.icoordinate=iInfo_temp.icoordinate;
-                    for j,tri_temp in enumerate(self.model.triangles):
-                        if triangle.vertex_indices[i] in tri_temp.vertex_indices and triangle.vertex_indices[(i+1)%3] in tri_temp.vertex_indices and iInfo.triangleID!=j:
-                            print('j is:')
-                            print(j);
-                            print('originalID is:')
-                            print(iInfo.triangleID);
-                            iInfo.triangleID=j;
-                            iInfo.normal=tri_temp.plane.n;
+                if (t_temp<t and t_temp>0) or t<=0:
+                    print("t_temp inside loop is:")
+                    print(t_temp)
                     t=t_temp;
+                    iInfo.icoordinate=iInfo_temp.icoordinate;
+                    ray_id=i;
+            #iterate self.model.triangles to find next triangleID
+            id_temp=iInfo.triangleID;
+            for i,tri_temp in enumerate(self.model.triangles):
+                if triangle.vertex_indices[ray_id] in tri_temp.vertex_indices and triangle.vertex_indices[(ray_id+1)%3] in tri_temp.vertex_indices and iInfo.triangleID!=i:
+#                            print('j is:')
+#                            print(j);
+#                            print('originalID is:')
+#                            print(iInfo.triangleID);
+                    id_temp=i;
+                    break;              
+            print('t is:')
+            print(t)
+            iInfo.triangleID=id_temp;
+            iInfo.normal=self.model.triangles[id_temp].plane.n;
             print('connecting point'+str(counter));
             print(iInfo.icoordinate);
             self.iInfos.append(iInfo);
@@ -192,6 +214,7 @@ class Ray_cast(object):
     def draw(self):
         #pass
         gl.glColor4f(*point_color);
+        gl.glPointSize(10)
         pyglet.graphics.draw(len(self.points)//3,gl.GL_POINTS,('v3f',self.points));
         if len(self.points)//3>1:
             pyglet.graphics.draw(len(self.points)//3,gl.GL_LINE_STRIP,('v3f',self.points));

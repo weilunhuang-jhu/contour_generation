@@ -48,7 +48,7 @@ class Window(pyglet.window.Window):
             # sets the projection
             gl.glMatrixMode(gl.GL_PROJECTION)
             gl.glLoadIdentity()
-            glu.gluPerspective(60, width / float(height), 0.1, 1000)
+            glu.gluPerspective(60, width / float(height), 0.1, 10000)
             self.camera.view();
             return pyglet.event.EVENT_HANDLED
 
@@ -74,11 +74,12 @@ class Window(pyglet.window.Window):
                 # next model
                 self.model_index = (self.model_index + 1) % len(self.model_names)
                 self.current_model = self.models[self.model_index]
-
+                self.ray_casting=Ray_cast(self.current_model);        
             elif symbol == pyglet.window.key.LEFT:
                 # previous model
                 self.model_index = (self.model_index - 1) % len(self.model_names)
                 self.current_model = self.models[self.model_index]
+                self.ray_casting=Ray_cast(self.current_model);
             # press F1 or F2 key to switch mode
             if symbol ==pyglet.window.key.F1:
                 self.mode="view";
