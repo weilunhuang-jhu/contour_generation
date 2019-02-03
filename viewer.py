@@ -1,6 +1,9 @@
 """
 Created on Tue Jan 08 2019
 
+reference:
+    http://www.poketcode.com/en/pyglet_demos/index.html#obj_viewer
+
 @author: weilunhuang
 """
 import os
@@ -126,6 +129,7 @@ class Window(pyglet.window.Window):
                 iInfo=IntersectionInfo();
                 (isIntersect,iInfo)=self.ray_casting.intersect(ray);
                 if isIntersect:
+                    print("====================")
                     print("iInfo in outest loop")
                     print(iInfo.icoordinate);
                     print("triangleID is")
