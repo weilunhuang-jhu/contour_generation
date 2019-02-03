@@ -11,7 +11,11 @@ from pyglet.gl import gl
 
 point_color=(1,1,0,1)
 
+# =============================================================================
+# IntersectionInfo class, to record intersection information
+# =============================================================================
 class IntersectionInfo(object):
+    
     
     def __init__(self):
         self.icoordinate=None;
@@ -27,7 +31,9 @@ class IntersectionInfo(object):
         iInfo.triangleID=self.triangleID;
         return iInfo;
         
-
+# =============================================================================
+# Triangle Class, to test intersection with a triangle
+# =============================================================================
 class Triangle(object):
     
     def __init__(self,i1,i2,i3,p1,p2,p3):
@@ -51,15 +57,7 @@ class Triangle(object):
         #print(t);
         if t>0:
             intersection=ray.p+ray.v*t;
-            v=intersection-self.vertices[0];
-            n_beta=self.plane.n.cross(self.v2);
-            n_gamma=self.plane.n.cross(self.v1);
-            v_beta=n_beta/self.v1.dot(n_beta);
-            v_gamma=n_gamma/self.v2.dot(n_gamma);
-            beta=v.dot(v_beta);
-            gamma=v.dot(v_gamma);
-            alpha=1-beta-gamma;
-            if alpha>=0 and beta>=0 and gamma>=0:
+            if self.inside_check(intersection):
                 iInfo.icoordinate=intersection;
                 iInfo.normal=self.plane.n;
                 #print("intersection in triangle:")
@@ -70,7 +68,20 @@ class Triangle(object):
                 return (False,iInfo)
         else:
             return (False,iInfo);
-        
+    def inside_check(self,intersection):
+        """
+            check if intersection is inside triangle, by Barycentric coordinate
+        """
+        v=intersection-self.vertices[0];
+        n_beta=self.plane.n.cross(self.v2);
+        n_gamma=self.plane.n.cross(self.v1);
+        v_beta=n_beta/self.v1.dot(n_beta);
+        v_gamma=n_gamma/self.v2.dot(n_gamma);
+        beta=v.dot(v_beta);
+        gamma=v.dot(v_gamma);
+        alpha=1-beta-gamma;
+        return (alpha>=0 and beta>=0 and gamma>=0)
+    
 class Ray_cast(object):
     def __init__(self,model):
         self.model=model;
@@ -100,8 +111,8 @@ class Ray_cast(object):
         #world coordinates
         vector_world=M_modelview_inversed*vector_eye;
         vector_world.normalize();
-        print(vector_world);
-        print(M_modelview_inversed);
+#        print(vector_world);
+#        print(M_modelview_inversed);
         #build ray, starting point is camera eye position
         ray=euclid.Ray3(euclid.Point3(M_modelview_inversed[12],M_modelview_inversed[13],M_modelview_inversed[14]),vector_world);
         return ray;
@@ -131,7 +142,7 @@ class Ray_cast(object):
         return (mx>-1,iInfo);
     def line_intersect(self,ray1,ray2):
         """
-            find intersection point between two lines
+            find intersection point between two rays in 3D
         """
         iInfo=IntersectionInfo();
         small_num=0.000001;
@@ -154,69 +165,91 @@ class Ray_cast(object):
         """
             find connecting points along surface
         """
-        ####note concave and convex cases
+        #dictionay to keep track of triangle gone through
+        triangle_dic={};
+        #set small number for floating point problem
         small_num=0.000001;
+        print("=========================")
         print("start ID is")
         print(iInfo_start.triangleID)
         print("end ID is")
         print(iInfo_end.triangleID)
         
         iInfo=iInfo_start.copy();
+        iInfo_prev=iInfo.copy();
         counter=0;
+        
         while(iInfo.triangleID!=iInfo_end.triangleID):
+            triangle_dic[iInfo.triangleID]=counter;
+            print("triangle Info:")
+            print("triangleID is "+str(iInfo.triangleID))
+            print("vertices:")
+            print(self.model.triangles[iInfo.triangleID].vertex_indices)
+            print(self.model.triangles[iInfo.triangleID].vertices);
+            
+#            if counter >9:
+#                break;
             counter+=1;
-            v12=iInfo_end.icoordinate-iInfo.icoordinate;
-#            #test convextiy
-#            convexity=v12.dot(iInfo.normal);
-#            n=iInfo.normal;
-#            if convexity>0:
-#                
-            #get projected vector of v12 on plane1
-            v_plane1=v12-v12.dot(iInfo.normal)/iInfo.normal.magnitude_squared()*(iInfo.normal);
-            v_plane1.normalize();
+            #check if triangle normal is too close to previous triangle normal
+            #we want to continue the vector direction if the two normals are similar 
+            if iInfo_prev.normal.dot(iInfo.normal)/iInfo.normal.magnitude_squared() >0.9:
+                v=iInfo_end.icoordinate-iInfo_prev.icoordinate;
+            else:
+                v=iInfo_end.icoordinate-iInfo.icoordinate;
+            #get projected vector of v on triangle
+            v_proj=v-v.dot(iInfo.normal)/iInfo.normal.magnitude_squared()*(iInfo.normal);
+            v_proj.normalize();
             #build ray with projected vector
-            ray_proj=euclid.Ray3(iInfo.icoordinate,v_plane1);
+            ray_proj=euclid.Ray3(iInfo.icoordinate,v_proj);
             print("ray_proj is:")
             print(ray_proj)
-            
-            ##find connecting point
+            #keep track of previous iInfo
+            iInfo_prev=iInfo.copy();
+            ###find connecting point
             t=-1;
             triangle=self.model.triangles[iInfo.triangleID];
             rays=[euclid.Ray3(triangle.vertices[0],triangle.vertices[1]),\
                   euclid.Ray3(triangle.vertices[1],triangle.vertices[2]),\
                   euclid.Ray3(triangle.vertices[2],triangle.vertices[0])]
             #iterate edges in triangle to find closest intersection for ray_proj
+            #and update iInfo
             ray_id=0;
             for i,ray in enumerate(rays):
                 print("ray"+str(i)+":");
                 (t_temp,iInfo_temp)=self.line_intersect(ray_proj,ray);
-                if (t_temp<t and t_temp>small_num) or t<=0:
-                    print("t_temp inside loop is:")
+                if (t_temp<t or t<0) and t_temp>small_num:
                     print(t_temp)
                     t=t_temp;
                     iInfo.icoordinate=iInfo_temp.icoordinate;
                     ray_id=i;
-            #iterate self.model.triangles to find next triangleID
-            id_temp=iInfo.triangleID;
-            for i,tri_temp in enumerate(self.model.triangles):
-                if triangle.vertex_indices[ray_id] in tri_temp.vertex_indices and triangle.vertex_indices[(ray_id+1)%3] in tri_temp.vertex_indices and iInfo.triangleID!=i:
-#                            print('j is:')
-#                            print(j);
-#                            print('originalID is:')
-#                            print(iInfo.triangleID);
-                    id_temp=i;
-                    break;              
             print('t is:')
             print(t)
+            #check if t < 0, which is intersection in wrong direction
             if(t<0):
-                print("error")
-            iInfo.triangleID=id_temp;
-            iInfo.normal=self.model.triangles[id_temp].plane.n;
-            print('connecting point'+str(counter));
+                print("error: connecting point in wrong direction");
+                break;
+#            #check if intersection is inside triangle
+#            if not self.model.triangles[iInfo.triangleID].inside_check(iInfo.icoordinate):
+#                print("error: connecting point is not in triangle")
+#                print("wrong connecting point:")
+#                print(iInfo.icoordinate)
+#                break;
+            #iterate self.model.triangles to find next triangleID
+            for i,tri_temp in enumerate(self.model.triangles):
+                #find triangle that consists of two vertice to build ray
+                #and find triangle whose ID is not yet in triangle_dic
+                if triangle.vertex_indices[ray_id] in tri_temp.vertex_indices and triangle.vertex_indices[(ray_id+1)%3] in tri_temp.vertex_indices and i not in triangle_dic:
+                    iInfo.triangleID=i;
+                    break;
+            #check if triangle found is correct
+            if iInfo.triangleID in triangle_dic:
+                print("error: wrong triangle found")
+                break;
+            iInfo.normal=self.model.triangles[iInfo.triangleID].plane.n;
+            print('connecting point'+str(counter)+" inside triangle"+str(iInfo.triangleID));
             print(iInfo.icoordinate);
             self.iInfos.append(iInfo);
-            print("inter ID is:")
-            print(iInfo.triangleID)
+            
             self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
     def spline(self):
         pass;    
