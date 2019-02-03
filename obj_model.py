@@ -3,6 +3,9 @@
 """
 Created on Fri Jan 25 23:02:04 2019
 
+reference:
+    http://www.poketcode.com/en/pyglet_demos/index.html#obj_viewer
+
 @author: weilunhuang
 """
 import euclid
