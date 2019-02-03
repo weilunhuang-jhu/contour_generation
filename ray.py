@@ -10,6 +10,7 @@ import pyglet
 from pyglet.gl import gl
 
 point_color=(1,1,0,1)
+cutting_vector_color=(1,0,0,1)
 
 # =============================================================================
 # IntersectionInfo class, to record intersection information
@@ -22,6 +23,7 @@ class IntersectionInfo(object):
         self.normal=None;
         self.text_coordinate=None;
         self.triangleID=None;
+        self.cutting_vector=None;
         
     def copy(self):
         iInfo=IntersectionInfo();
@@ -29,6 +31,8 @@ class IntersectionInfo(object):
         iInfo.normal=self.normal;
         iInfo.text_coordinate=self.text_coordinate;
         iInfo.triangleID=self.triangleID;
+        iInfo.cutting_vector=self.cutting_vector;
+        
         return iInfo;
         
 # =============================================================================
@@ -86,6 +90,7 @@ class Ray_cast(object):
     def __init__(self,model):
         self.model=model;
         self.points=[];
+        self.cutting_vector_points=[];
         self.iInfos=[];
     def build_ray(self,mouse_x,mouse_y,button,w,h):
         """
@@ -137,8 +142,13 @@ class Ray_cast(object):
             
             if len(self.iInfos)>0:
                 self.connect(self.iInfos[-1],iInfo);
+                #add one more cutting end
+                self.find_CuttingVector(iInfo);
             self.iInfos.append(iInfo);
             self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
+            self.cutting_vector_points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
+            print("cutting vector points:")
+            print(self.cutting_vector_points)
         return (mx>-1,iInfo);
     def line_intersect(self,ray1,ray2):
         """
@@ -159,8 +169,22 @@ class Ray_cast(object):
                 t=-t
             iInfo.icoordinate=ray1.p+t*ray1.v;
         return(t,iInfo);
-        
-        
+    def find_CuttingVector(self,iInfo):
+        """
+            find cutting vector on intersection point
+        """
+        v=iInfo.icoordinate-self.iInfos[-1].icoordinate;
+        vector=self.iInfos[-1].normal.cross(v);
+        vector.normalize();
+        self.iInfos[-1].cutting_vector=vector;
+        cut_end=self.iInfos[-1].icoordinate+vector;
+        self.cutting_vector_points.extend((cut_end[0],cut_end[1],cut_end[2]));
+    def find_connect_point(self,iInfo_prev,iInfo,iInfo_end):
+        """
+            find vector on intersection point, called in connect()
+        """
+        pass;
+            
     def connect(self,iInfo_start,iInfo_end):
         """
             find connecting points along surface
@@ -187,8 +211,6 @@ class Ray_cast(object):
             print(self.model.triangles[iInfo.triangleID].vertex_indices)
             print(self.model.triangles[iInfo.triangleID].vertices);
             
-#            if counter >9:
-#                break;
             counter+=1;
             #check if triangle normal is too close to previous triangle normal
             #we want to continue the vector direction if the two normals are similar 
@@ -203,6 +225,7 @@ class Ray_cast(object):
             ray_proj=euclid.Ray3(iInfo.icoordinate,v_proj);
             print("ray_proj is:")
             print(ray_proj)
+            
             #keep track of previous iInfo
             iInfo_prev=iInfo.copy();
             ###find connecting point
@@ -211,6 +234,7 @@ class Ray_cast(object):
             rays=[euclid.Ray3(triangle.vertices[0],triangle.vertices[1]),\
                   euclid.Ray3(triangle.vertices[1],triangle.vertices[2]),\
                   euclid.Ray3(triangle.vertices[2],triangle.vertices[0])]
+            
             #iterate edges in triangle to find closest intersection for ray_proj
             #and update iInfo
             ray_id=0;
@@ -246,18 +270,23 @@ class Ray_cast(object):
                 print("error: wrong triangle found")
                 break;
             iInfo.normal=self.model.triangles[iInfo.triangleID].plane.n;
+            self.find_CuttingVector(iInfo);
             print('connecting point'+str(counter)+" inside triangle"+str(iInfo.triangleID));
             print(iInfo.icoordinate);
             self.iInfos.append(iInfo);
             
             self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
+            self.cutting_vector_points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
+            
     def spline(self):
         pass;    
     def draw(self):
         #pass
         gl.glColor4f(*point_color);
-        gl.glPointSize(10)
+        gl.glPointSize(5)
         pyglet.graphics.draw(len(self.points)//3,gl.GL_POINTS,('v3f',self.points));
         if len(self.points)//3>1:
-            pyglet.graphics.draw(len(self.points)//3,gl.GL_LINE_STRIP,('v3f',self.points));
+            #pyglet.graphics.draw(len(self.points)//3,gl.GL_LINE_STRIP,('v3f',self.points));
+            gl.glColor4f(*cutting_vector_color);
+            pyglet.graphics.draw(len(self.cutting_vector_points)//3-1,gl.GL_LINES,('v3f',self.cutting_vector_points[:len(self.cutting_vector_points)-3]));
             
