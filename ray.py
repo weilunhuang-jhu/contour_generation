@@ -85,12 +85,14 @@ class Triangle(object):
         gamma=v.dot(v_gamma);
         alpha=1-beta-gamma;
         return (alpha>=0 and beta>=0 and gamma>=0)
-    
+# =============================================================================
+# Ray_cast Class, to do ray-castin, find connecting points along surface
+# =============================================================================    
 class Ray_cast(object):
     def __init__(self,model):
         self.model=model;
         self.points=[];
-        self.cutting_vector_points=[];
+        self.cutting_vector_points=[];#consists of pairs of point and cut_end point
         self.iInfos=[];
     def build_ray(self,mouse_x,mouse_y,button,w,h):
         """
@@ -142,11 +144,9 @@ class Ray_cast(object):
             
             if len(self.iInfos)>0:
                 self.connect(self.iInfos[-1],iInfo);
-                #add one more cutting end
-                self.find_CuttingVector(iInfo);
             self.iInfos.append(iInfo);
             self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
-            self.cutting_vector_points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
+            self.find_CuttingVector();
             print("cutting vector points:")
             print(self.cutting_vector_points)
         return (mx>-1,iInfo);
@@ -169,21 +169,67 @@ class Ray_cast(object):
                 t=-t
             iInfo.icoordinate=ray1.p+t*ray1.v;
         return(t,iInfo);
-    def find_CuttingVector(self,iInfo):
+    def find_CuttingVector(self):
         """
             find cutting vector on intersection point
         """
-        v=iInfo.icoordinate-self.iInfos[-1].icoordinate;
-        vector=self.iInfos[-1].normal.cross(v);
-        vector.normalize();
-        self.iInfos[-1].cutting_vector=vector;
-        cut_end=self.iInfos[-1].icoordinate+vector;
-        self.cutting_vector_points.extend((cut_end[0],cut_end[1],cut_end[2]));
-    def find_connect_point(self,iInfo_prev,iInfo,iInfo_end):
+        print("len of cutting vector points(before)")
+        print(len(self.cutting_vector_points))
+        print("len of self.iInfos")
+        print(len(self.iInfos))
+        for i in range(len(self.cutting_vector_points)//6,len(self.iInfos)-1):
+            print("i is")
+            print(i)
+            print("iInfos[i+1]:")
+            print(self.iInfos[i+1].icoordinate)
+            print("iInfos[i]:")
+            print(self.iInfos[i].icoordinate)
+            v=self.iInfos[i+1].icoordinate-self.iInfos[i].icoordinate;
+            print("v is:")
+            print(v)
+            print("normal of iInfo i is")
+            print(self.iInfos[i].normal)
+            vector=self.iInfos[i].normal.cross(v);
+            vector.normalize();
+            print("vector is")
+            print(vector);
+            self.iInfos[i].cutting_vector=vector;
+            cut_end=self.iInfos[i].icoordinate+vector;
+            self.cutting_vector_points.extend((self.iInfos[i].icoordinate[0],self.iInfos[i].icoordinate[1],self.iInfos[i].icoordinate[2]));
+            self.cutting_vector_points.extend((cut_end[0],cut_end[1],cut_end[2]));
+        print("len of cutting vector points(after)")
+        print(len(self.cutting_vector_points))
+    def find_connect_point(self,iInfo,ray_proj,triangle_dic):
         """
             find vector on intersection point, called in connect()
         """
-        pass;
+        #set small number for floating point problem
+        small_num=0.000001;
+        ###find connecting point
+        t=-1;
+        triangle=self.model.triangles[iInfo.triangleID];
+        rays=[euclid.Ray3(triangle.vertices[0],triangle.vertices[1]),\
+              euclid.Ray3(triangle.vertices[1],triangle.vertices[2]),\
+              euclid.Ray3(triangle.vertices[2],triangle.vertices[0])]
+        #iterate edges in triangle to find closest intersection for ray_proj
+        #and update iInfo
+        ray_id=0;
+        for i,ray in enumerate(rays):
+            print("ray"+str(i)+":");
+            (t_temp,iInfo_temp)=self.line_intersect(ray_proj,ray);
+            if (t_temp<t or t<0) and t_temp>small_num:
+                print(t_temp)
+                t=t_temp;
+                iInfo.icoordinate=iInfo_temp.icoordinate;
+                ray_id=i;
+        #iterate self.model.triangles to find next triangleID
+        for i,tri_temp in enumerate(self.model.triangles):
+            #find triangle that consists of two vertice to build ray
+            #and find triangle whose ID is not yet in triangle_dic
+            if triangle.vertex_indices[ray_id] in tri_temp.vertex_indices and triangle.vertex_indices[(ray_id+1)%3] in tri_temp.vertex_indices and i not in triangle_dic:
+                iInfo.triangleID=i;
+                break;
+        return (t,ray_id);
             
     def connect(self,iInfo_start,iInfo_end):
         """
@@ -191,8 +237,6 @@ class Ray_cast(object):
         """
         #dictionay to keep track of triangle gone through
         triangle_dic={};
-        #set small number for floating point problem
-        small_num=0.000001;
         print("=========================")
         print("start ID is")
         print(iInfo_start.triangleID)
@@ -204,6 +248,7 @@ class Ray_cast(object):
         counter=0;
         
         while(iInfo.triangleID!=iInfo_end.triangleID):
+            
             triangle_dic[iInfo.triangleID]=counter;
             print("triangle Info:")
             print("triangleID is "+str(iInfo.triangleID))
@@ -225,27 +270,10 @@ class Ray_cast(object):
             ray_proj=euclid.Ray3(iInfo.icoordinate,v_proj);
             print("ray_proj is:")
             print(ray_proj)
-            
             #keep track of previous iInfo
             iInfo_prev=iInfo.copy();
-            ###find connecting point
-            t=-1;
-            triangle=self.model.triangles[iInfo.triangleID];
-            rays=[euclid.Ray3(triangle.vertices[0],triangle.vertices[1]),\
-                  euclid.Ray3(triangle.vertices[1],triangle.vertices[2]),\
-                  euclid.Ray3(triangle.vertices[2],triangle.vertices[0])]
-            
-            #iterate edges in triangle to find closest intersection for ray_proj
-            #and update iInfo
-            ray_id=0;
-            for i,ray in enumerate(rays):
-                print("ray"+str(i)+":");
-                (t_temp,iInfo_temp)=self.line_intersect(ray_proj,ray);
-                if (t_temp<t or t<0) and t_temp>small_num:
-                    print(t_temp)
-                    t=t_temp;
-                    iInfo.icoordinate=iInfo_temp.icoordinate;
-                    ray_id=i;
+            #find intersection with t and ray_id, iInfo passed by reference
+            t,ray_id=self.find_connect_point(iInfo,ray_proj,triangle_dic);
             print('t is:')
             print(t)
             #check if t < 0, which is intersection in wrong direction
@@ -258,25 +286,19 @@ class Ray_cast(object):
 #                print("wrong connecting point:")
 #                print(iInfo.icoordinate)
 #                break;
-            #iterate self.model.triangles to find next triangleID
-            for i,tri_temp in enumerate(self.model.triangles):
-                #find triangle that consists of two vertice to build ray
-                #and find triangle whose ID is not yet in triangle_dic
-                if triangle.vertex_indices[ray_id] in tri_temp.vertex_indices and triangle.vertex_indices[(ray_id+1)%3] in tri_temp.vertex_indices and i not in triangle_dic:
-                    iInfo.triangleID=i;
-                    break;
             #check if triangle found is correct
             if iInfo.triangleID in triangle_dic:
                 print("error: wrong triangle found")
                 break;
+            #update iInfo.normal
             iInfo.normal=self.model.triangles[iInfo.triangleID].plane.n;
-            self.find_CuttingVector(iInfo);
+            
             print('connecting point'+str(counter)+" inside triangle"+str(iInfo.triangleID));
             print(iInfo.icoordinate);
-            self.iInfos.append(iInfo);
             
+            iInfoTemp=iInfo.copy();
+            self.iInfos.append(iInfoTemp);
             self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
-            self.cutting_vector_points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
             
     def spline(self):
         pass;    
@@ -286,7 +308,7 @@ class Ray_cast(object):
         gl.glPointSize(5)
         pyglet.graphics.draw(len(self.points)//3,gl.GL_POINTS,('v3f',self.points));
         if len(self.points)//3>1:
-            #pyglet.graphics.draw(len(self.points)//3,gl.GL_LINE_STRIP,('v3f',self.points));
+            pyglet.graphics.draw(len(self.points)//3,gl.GL_LINE_STRIP,('v3f',self.points));
             gl.glColor4f(*cutting_vector_color);
-            pyglet.graphics.draw(len(self.cutting_vector_points)//3-1,gl.GL_LINES,('v3f',self.cutting_vector_points[:len(self.cutting_vector_points)-3]));
+            pyglet.graphics.draw(len(self.cutting_vector_points)//3,gl.GL_LINES,('v3f',self.cutting_vector_points));
             
