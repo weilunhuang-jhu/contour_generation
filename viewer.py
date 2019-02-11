@@ -29,7 +29,9 @@ class Window(pyglet.window.Window):
         gl.glClearColor(*black)
 
         # pre-loaded models
-        self.model_names = ['box.obj', 'uv_sphere.obj', 'monkey.obj','part.obj']
+        #self.model_names = ['box.obj', 'uv_sphere.obj', 'monkey.obj','Model.obj']
+        self.model_names = ['Model.obj']
+        
         self.models = []
         for name in self.model_names:
             self.models.append(OBJModel(x=0.0,y=0.0,z=0.0,color=dark_gray, path=os.path.join('obj', name)))
@@ -60,9 +62,6 @@ class Window(pyglet.window.Window):
             # clears the screen with the background color
             gl.glClear(gl.GL_COLOR_BUFFER_BIT)
             #gl.glLoadIdentity()
-
-            # sets wire-frame mode
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
 
             # draws the current model
             self.current_model.draw()

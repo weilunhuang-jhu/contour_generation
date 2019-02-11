@@ -8,6 +8,7 @@ reference:
 
 @author: weilunhuang
 """
+import os
 import euclid
 import pyglet
 from ray import Triangle
@@ -29,6 +30,8 @@ class OBJModel:
         self.normal_indices=[];
         self.text_indices=[];
         self.triangles=[];
+        self.vertex_list=None;
+        self.texture=None;
 
         # translation and rotation values
         self.x, self.y, self.z = x, y, z;
@@ -40,6 +43,8 @@ class OBJModel:
         # if path is provided
         if path:
             self.load(path);
+            up_dir=os.path.split(path)[0];
+            self.texture_setting(os.path.join(up_dir+'/Model.jpg'))
 
     def clear(self):
         self.vertices = self.vertices[:];
@@ -120,6 +125,18 @@ class OBJModel:
             self.triangles.append(Triangle(points_indices[0],points_indices[1],points_indices[2],\
                                            p1,p2,p3));
             points_indices.clear();
+    def texture_setting(self,pic_path):
+        if len(self.text_indices)>0:
+            gl.glEnable(gl.GL_CULL_FACE);
+            # texture set up
+            pic = pyglet.image.load(pic_path);
+            self.texture = pic.get_texture();
+            #print(self.texture);
+            gl.glEnable(self.texture.target);
+            gl.glBindTexture(self.texture.target, self.texture.id);
+            self.vertex_list = pyglet.graphics.vertex_list_indexed(len(self.vertices) // 3,self.triangle_indices,\
+                                                              ('v3f',self.vertices),('t2f',self.text_coord),('n3f',self.vertex_nomals));
+        
     def subdivision(self):
         pass;
     def draw(self):
@@ -140,11 +157,15 @@ class OBJModel:
 #        batch=pyglet.graphics.Batch();
 #        vertex_list=batch.add(len(self.vertices) // 3,gl.GL_QUADS,None,('v3f', self.vertices));
 #        batch.draw();
-#        vertex_list = pyglet.graphics.vertex_list(len(self.vertices) / 3,('v3f', self.vertices));
-#        vertex_list.draw(gl.GL_QUADS)
-
-        # draws the quads
-        pyglet.graphics.draw_indexed(len(self.vertices) // 3, gl.GL_QUADS, self.quad_indices, ('v3f', self.vertices))
-        # draws the triangles
-        pyglet.graphics.draw_indexed(len(self.vertices) // 3, gl.GL_TRIANGLES, self.triangle_indices,('v3f', self.vertices))
+        if len(self.text_indices)>0:
+            #print("text mode!")
+            self.vertex_list.draw(gl.GL_TRIANGLES);
+            #gl.glDisable(self.texture.target);
+        else:
+            # sets wire-frame mode
+#            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)  
+            # draws the quads
+            pyglet.graphics.draw_indexed(len(self.vertices) // 3, gl.GL_QUADS, self.quad_indices, ('v3f', self.vertices))
+            # draws the triangles
+            pyglet.graphics.draw_indexed(len(self.vertices) // 3, gl.GL_TRIANGLES, self.triangle_indices,('v3f', self.vertices))
         gl.glPopMatrix();        
