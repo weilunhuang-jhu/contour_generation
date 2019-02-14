@@ -93,6 +93,7 @@ class Ray_cast(object):
         self.model=model;
         self.points=[];
         self.cutting_vector_points=[];#consists of pairs of point and cut_end point
+        self.cutting_vector_points_new=[];
         self.iInfos=[];
     def build_ray(self,mouse_x,mouse_y,button,w,h):
         """
@@ -169,6 +170,31 @@ class Ray_cast(object):
                 t=-t
             iInfo.icoordinate=ray1.p+t*ray1.v;
         return(t,iInfo);
+    def find_center(self):
+        """
+            find center point of all intersection points
+        """
+        point=euclid.Point3(0,0,0)
+        for iInfo in self.iInfos:
+            point+=iInfo.icoordinate;
+        return point/len(self.iInfos);
+    def find_CuttingVectorNew(self):
+        """
+            find cutting vector on intersection point defined by center
+        """
+        pass;
+#        center=self.find_center();
+#        for i,iInfo in enumerate(self.iInfos):
+#            d=center-iInfo.icoordinate;
+#            d.normalize();
+#            #if d and surface normal are too close
+#            if d.dot(iInfo.normal)>0.95:
+#                print()
+#            else:
+#                #get projected vector of d on triangle
+#                d_proj=d-d.dot(iInfo.normal)/iInfo.normal.magnitude_squared()*(iInfo.normal);
+#                v_proj.normalize();
+            
     def find_CuttingVector(self):
         """
             find cutting vector on intersection point
@@ -299,7 +325,7 @@ class Ray_cast(object):
             iInfoTemp=iInfo.copy();
             self.iInfos.append(iInfoTemp);
             self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
-            
+           
     def spline(self):
         pass;    
     def draw(self):

@@ -29,8 +29,8 @@ class Window(pyglet.window.Window):
         gl.glClearColor(*black)
 
         # pre-loaded models
-        #self.model_names = ['box.obj', 'uv_sphere.obj', 'monkey.obj','Model.obj']
-        self.model_names = ['Model.obj']
+        self.model_names = ['box.obj', 'uv_sphere.obj', 'monkey.obj','Model.obj']
+#        self.model_names = ['Model.obj']
         
         self.models = []
         for name in self.model_names:
@@ -75,7 +75,15 @@ class Window(pyglet.window.Window):
             if symbol == pyglet.window.key.RIGHT:
                 # next model
                 self.model_index = (self.model_index + 1) % len(self.model_names)
-                self.current_model = self.models[self.model_index]
+                # disable texture rendering for current model
+                if self.current_model.texture is not None:
+                    gl.glBindTexture(self.current_model.texture.target, 0);
+                    gl.glDisable(self.current_model.texture.target);
+                self.current_model = self.models[self.model_index];
+#                # enable texture rendering for current model
+                if self.current_model.texture is not None:
+                    gl.glEnable(self.current_model.texture.target);
+                    gl.glBindTexture(self.current_model.texture.target, self.current_model.texture.id);
                 self.ray_casting=Ray_cast(self.current_model);        
             elif symbol == pyglet.window.key.LEFT:
                 # previous model

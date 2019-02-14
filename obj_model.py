@@ -131,12 +131,11 @@ class OBJModel:
             # texture set up
             pic = pyglet.image.load(pic_path);
             self.texture = pic.get_texture();
-            #print(self.texture);
+            print(self.texture.id)
             gl.glEnable(self.texture.target);
             gl.glBindTexture(self.texture.target, self.texture.id);
             self.vertex_list = pyglet.graphics.vertex_list_indexed(len(self.vertices) // 3,self.triangle_indices,\
                                                               ('v3f',self.vertices),('t2f',self.text_coord),('n3f',self.vertex_nomals));
-        
     def subdivision(self):
         pass;
     def draw(self):
@@ -157,13 +156,17 @@ class OBJModel:
 #        batch=pyglet.graphics.Batch();
 #        vertex_list=batch.add(len(self.vertices) // 3,gl.GL_QUADS,None,('v3f', self.vertices));
 #        batch.draw();
+        
+#        # draw by texture rendering
         if len(self.text_indices)>0:
-            #print("text mode!")
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL );
+            print("text mode!")
             self.vertex_list.draw(gl.GL_TRIANGLES);
-            #gl.glDisable(self.texture.target);
+        
+        # draw by wire-frame mode
         else:
             # sets wire-frame mode
-#            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)  
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)  
             # draws the quads
             pyglet.graphics.draw_indexed(len(self.vertices) // 3, gl.GL_QUADS, self.quad_indices, ('v3f', self.vertices))
             # draws the triangles
