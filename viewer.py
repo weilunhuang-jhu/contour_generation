@@ -95,6 +95,10 @@ class Window(pyglet.window.Window):
                 self.mode="view";
             if symbol==pyglet.window.key.F2:
                 self.mode="draw";
+            # press F3 key to find cutting vector by center
+            if symbol==pyglet.window.key.F3:
+                self.ray_casting.end=True;
+                self.ray_casting.find_CuttingVectorByMean();
             # press F5 to resume to initial view
             if symbol==pyglet.window.key.F5:
                 self.camera.view();

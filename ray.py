@@ -12,6 +12,8 @@ from pyglet.gl import gl
 
 point_color=(1,1,0,1)
 cutting_vector_color=(1,0,0,1)
+#cutting_vector_by_center_color=(0,1,0,1)
+cutting_vector_by_mean_color=(0,1,0,1)
 
 # =============================================================================
 # Ray_cast Class, to do ray-castin, find connecting points along surface
@@ -21,8 +23,11 @@ class Ray_cast(object):
         self.model=model;
         self.points=[];
         self.cutting_vector_points=[];#consists of pairs of point and cut_end point
-        self.cutting_vector_points_new=[];
+        #self.cutting_vector_points_by_center=[];
+        self.cutting_vector_points_by_mean=[];
         self.iInfos=[];
+        self.end=False;
+    
     def build_ray(self,mouse_x,mouse_y,button,w,h):
         """
             build ray: from mouse position to a 3D ray (in world coordinate) starting from camera eye position
@@ -52,6 +57,7 @@ class Ray_cast(object):
         #build ray, starting point is camera eye position
         ray=euclid.Ray3(euclid.Point3(M_modelview_inversed[12],M_modelview_inversed[13],M_modelview_inversed[14]),vector_world);
         return ray;
+    
     def intersect(self,ray):
         """
             find intersection between ray and mesh model
@@ -75,10 +81,11 @@ class Ray_cast(object):
                 self.connect(self.iInfos[-1],iInfo);
             self.iInfos.append(iInfo);
             self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
-            self.find_CuttingVector();
+            self.find_CuttingVectors();
             print("cutting vector points:")
             print(self.cutting_vector_points)
         return (mx>-1,iInfo);
+    
     def line_intersect(self,ray1,ray2):
         """
             find intersection point between two rays in 3D
@@ -98,61 +105,52 @@ class Ray_cast(object):
                 t=-t
             iInfo.icoordinate=ray1.p+t*ray1.v;
         return(t,iInfo);
-    def find_center(self):
+        
+    def generate_CuttingVector(self,iInfo1,iInfo2):
         """
-            find center point of all intersection points
+            generate cutting vector on iInfo1 given iInfo2
         """
-        point=euclid.Point3(0,0,0)
-        for iInfo in self.iInfos:
-            point+=iInfo.icoordinate;
-        return point/len(self.iInfos);
-    def find_CuttingVectorNew(self):
-        """
-            find cutting vector on intersection point defined by center
-        """
-        pass;
-#        center=self.find_center();
-#        for i,iInfo in enumerate(self.iInfos):
-#            d=center-iInfo.icoordinate;
-#            d.normalize();
-#            #if d and surface normal are too close
-#            if d.dot(iInfo.normal)>0.95:
-#                print()
-#            else:
-#                #get projected vector of d on triangle
-#                d_proj=d-d.dot(iInfo.normal)/iInfo.normal.magnitude_squared()*(iInfo.normal);
-#                v_proj.normalize();
+        v=iInfo2.icoordinate-iInfo1.icoordinate;
+        vector=iInfo1.normal.cross(v);
+        vector.normalize();
+        return vector;
             
-    def find_CuttingVector(self):
+    def find_MeanCuttingVector(self):
+        """
+            find average of all cutting vector
+        """
+        vector=euclid.Vector3(0,0,0);
+        #generate cutting vector for last iInfo
+        self.iInfos[-1].cutting_vector=self.generate_CuttingVector(self.iInfos[-1],self.iInfos[0]);
+        #find average cutting vector
+        for iInfo in self.iInfos:
+            vector+=iInfo.cutting_vector;
+        return vector/len(self.iInfos);
+    
+    def find_CuttingVectorByMean(self):
+        """
+            find average of all cutting vector,
+            project the mean cutting vector onto triangles
+        """
+        mean_vector=self.find_MeanCuttingVector();
+        for i,iInfo in enumerate(self.iInfos):
+            mean_vector_proj=mean_vector-mean_vector.dot(iInfo.normal)/iInfo.normal.magnitude_squared()*(iInfo.normal);
+            mean_vector_proj.normalize();
+            cut_end=iInfo.icoordinate+mean_vector_proj;
+            self.cutting_vector_points_by_mean.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
+            self.cutting_vector_points_by_mean.extend((cut_end[0],cut_end[1],cut_end[2]));
+            
+    def find_CuttingVectors(self):
         """
             find cutting vector on intersection point
         """
-        print("len of cutting vector points(before)")
-        print(len(self.cutting_vector_points))
-        print("len of self.iInfos")
-        print(len(self.iInfos))
         for i in range(len(self.cutting_vector_points)//6,len(self.iInfos)-1):
-            print("i is")
-            print(i)
-            print("iInfos[i+1]:")
-            print(self.iInfos[i+1].icoordinate)
-            print("iInfos[i]:")
-            print(self.iInfos[i].icoordinate)
-            v=self.iInfos[i+1].icoordinate-self.iInfos[i].icoordinate;
-            print("v is:")
-            print(v)
-            print("normal of iInfo i is")
-            print(self.iInfos[i].normal)
-            vector=self.iInfos[i].normal.cross(v);
-            vector.normalize();
-            print("vector is")
-            print(vector);
+            vector=self.generate_CuttingVector(self.iInfos[i],self.iInfos[i+1])
             self.iInfos[i].cutting_vector=vector;
             cut_end=self.iInfos[i].icoordinate+vector;
             self.cutting_vector_points.extend((self.iInfos[i].icoordinate[0],self.iInfos[i].icoordinate[1],self.iInfos[i].icoordinate[2]));
             self.cutting_vector_points.extend((cut_end[0],cut_end[1],cut_end[2]));
-        print("len of cutting vector points(after)")
-        print(len(self.cutting_vector_points))
+       
     def find_connect_point(self,iInfo,ray_proj,triangle_dic):
         """
             find vector on intersection point, called in connect()
@@ -265,4 +263,39 @@ class Ray_cast(object):
             pyglet.graphics.draw(len(self.points)//3,gl.GL_LINE_STRIP,('v3f',self.points));
             gl.glColor4f(*cutting_vector_color);
             pyglet.graphics.draw(len(self.cutting_vector_points)//3,gl.GL_LINES,('v3f',self.cutting_vector_points));
-            
+        if self.end:
+            gl.glColor4f(*cutting_vector_by_mean_color);
+            pyglet.graphics.draw(len(self.cutting_vector_points_by_mean)//3,gl.GL_LINES,('v3f',self.cutting_vector_points_by_mean));
+        
+
+#    def find_center(self):
+#        """
+#            find center point of all intersection points
+#        """
+#        point=euclid.Point3(0,0,0)
+#        for iInfo in self.iInfos:
+#            point+=iInfo.icoordinate;
+#        return point/len(self.iInfos);
+#
+#    def find_CuttingVectorByCenter(self):
+#        """
+#            find cutting vector on intersection point defined by center,
+#            only called after a ring of points are generated 
+#        """
+#        center=self.find_center();
+#        vector=euclid.Vector3(0,0,0);
+#        for i,iInfo in enumerate(self.iInfos):
+#            d=center-iInfo.icoordinate;
+#            d.normalize();
+#            #check if d and triangle normal are not almost parallel
+#            if d.dot(iInfo.normal)<0.95:
+#                #get projected vector of d on triangle
+#                d_proj=d-d.dot(iInfo.normal)/iInfo.normal.magnitude_squared()*(iInfo.normal);
+#                d_proj.normalize();
+#                vector=d_proj;
+#            else:
+#                print("d and triangle normal are almost parallel!");
+#                vector=iInfo.cutting_vector;
+#            cut_end=iInfo.icoordinate+vector;
+#            self.cutting_vector_points_by_center.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
+#            self.cutting_vector_points_by_center.extend((cut_end[0],cut_end[1],cut_end[2]));
