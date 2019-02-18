@@ -17,20 +17,19 @@
 
 * run
 ```python view.py 
-```
-with your **.obj** files in **/obj** folder and **/obj** should be at the same folder as all the **.py** files
+``` with your **.obj** files in **/obj** folder and **/obj** should be at the same folder as all the **.py** files
 * In the application window, use F1 (view) and F2 (draw) to switch **view** mode and **draw** mode
 
 * In view mode:
 
  mouse scroll for zoom in and out
-
+ 
  mouse left for camera translation
-
+ 
  mouse right for camera rotation
 
 * In draw mode:
-
+ 
  mouse press to choose arbitrary points on mesh model (if intersection exists between mesh model surface and ray emitted from your mouse position ), currently with functions to **find connecting points** and **find cutting vectors**
 
 
