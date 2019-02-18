@@ -1,5 +1,5 @@
 # contour_generation
-## Description
+## Project Description
 
 * A simple interactive application to allow user to choose arbitrary points on a mesh model with mouse
 * Aims to generate contour of defected area of skull mesh
@@ -22,11 +22,11 @@ with your **.obj** files in **/obj** folder and **/obj** should be at the same f
 
 * In view mode:
 
-  mouse scroll for zoom in and out
+  1. mouse scroll for zoom in and out
  
-  mouse left for camera translation
+  2. mouse left for camera translation
  
-  mouse right for camera rotation
+  3. mouse right for camera rotation
 
 * In draw mode:
  
@@ -35,7 +35,7 @@ with your **.obj** files in **/obj** folder and **/obj** should be at the same f
 
   
 
-## Files Description
+## File Description
 * obj_model.py:
  
   load OBJ file and generate model object with vertices, normals, surfaces, texture coordinates information 
