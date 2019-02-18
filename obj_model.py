@@ -11,7 +11,7 @@ reference:
 import os
 import euclid
 import pyglet
-from ray import Triangle
+from triangle import Triangle
 from pyglet.gl import gl
 
 # colors
