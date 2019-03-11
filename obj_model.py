@@ -35,7 +35,8 @@ class OBJModel:
 
         # translation and rotation values
         self.x, self.y, self.z = x, y, z;
-        self.rx = self.ry = self.rz = 0;
+        self.rx = self.rz = 0;
+        self.ry=0;
 
         # color of the model
         self.color = color;
@@ -92,7 +93,14 @@ class OBJModel:
                     elif len(data) == 4:
                         #triangles with complete info
                         vi_1, vi_2, vi_3 = data[1:4]
-                        if '/' in data[1]:
+                        if '//' in data[1]:
+                            vi_1=vi_1.split('//')
+                            vi_2=vi_2.split('//')
+                            vi_3=vi_3.split('//')
+                            self.triangle_indices.extend((int(vi_1[0]) - 1, int(vi_2[0]) - 1, int(vi_3[0]) - 1))
+                            self.normal_indices.extend((int(vi_1[1]) - 1, int(vi_2[1]) - 1, int(vi_3[1]) - 1))
+                            
+                        elif '/' in data[1]:
                             vi_1=vi_1.split('/')
                             vi_2=vi_2.split('/')
                             vi_3=vi_3.split('/')
