@@ -7,7 +7,6 @@ Created on Fri Jan 18 15:44:54 2019
 """
 import euclid
 import pyglet
-import math
 from pyglet.gl import gl
 from pyglet.gl import glu
 
@@ -78,6 +77,9 @@ class Camera(object):
         self.direction=direction.normalized();
         self.up=up.normalized();
         self.right=self.direction.cross(self.up).normalized();
+        self.sensitive_t=1.0;
+        self.sensitive_z=5;
+        self.sensitive_r=0.3;
         #self.tx,self.ty,self.tz,self.rx,self.ry,self.rz=0,0,0,0,0,0;
         
     def view(self):
@@ -93,9 +95,9 @@ class Camera(object):
     def translate(self,dx, dy, button):
         #move right and up
         if button == pyglet.window.mouse.LEFT:
-            delta_x=self.right[0]*dx/20+self.up[0]*dy/20;
-            delta_y=self.right[1]*dx/20+self.up[1]*dy/20;
-            delta_z=self.right[2]*dx/20+self.up[2]*dy/20;
+            delta_x=self.right[0]*dx*self.sensitive_t+self.up[0]*dy*self.sensitive_t;
+            delta_y=self.right[1]*dx*self.sensitive_t+self.up[1]*dy*self.sensitive_t;
+            delta_z=self.right[2]*dx*self.sensitive_t+self.up[2]*dy*self.sensitive_t;
             gl.glTranslatef(-delta_x,-delta_y,-delta_z);
 #            M_modelview=(gl.GLfloat*16)();
 #            gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX,M_modelview);
@@ -105,9 +107,9 @@ class Camera(object):
 #            self.view();
     def zoom(self,scroll_y):
         #zoom in and out
-        delta_x=self.direction[0]* scroll_y / 1.0;
-        delta_y=self.direction[1]* scroll_y / 1.0;
-        delta_z=self.direction[2]* scroll_y / 1.0;
+        delta_x=self.direction[0]* scroll_y *self.sensitive_z;
+        delta_y=self.direction[1]* scroll_y *self.sensitive_z;
+        delta_z=self.direction[2]* scroll_y *self.sensitive_z;
         gl.glTranslatef(delta_x,delta_y,delta_z);
 #        M_modelview=(gl.GLfloat*16)();
 #        gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX,M_modelview);
@@ -117,8 +119,8 @@ class Camera(object):
 #        self.view();
     def rotate(self,dx, dy, button):
         if button == pyglet.window.mouse.RIGHT:
-            delta_rx=-dy/10;
-            delta_ry=dx/10;
+            delta_rx=-dy*self.sensitive_r;
+            delta_ry=dx*self.sensitive_r;
 #            M_modelview=(gl.GLfloat*16)();
 #            gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX,M_modelview);
 #            M_modelview=euclid.Matrix4.new(*(list(M_modelview)));
