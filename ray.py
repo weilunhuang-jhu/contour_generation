@@ -26,6 +26,8 @@ class Ray_cast(object):
         #self.cutting_vector_points_by_center=[];
         self.cutting_vector_points_by_mean=[];
         self.iInfos=[];
+        self.prev_iInfos=[];
+        self.cutting_vector_length=20;
         self.end=False;
     
     def build_ray(self,mouse_x,mouse_y,button,w,h):
@@ -86,6 +88,43 @@ class Ray_cast(object):
             print(self.cutting_vector_points)
         return (mx>-1,iInfo);
     
+    def intersect_on_new_model(self):
+        for prev_iInfo in self.prev_iInfos:
+            ray=euclid.Ray3(prev_iInfo.icoordinate,-prev_iInfo.cutting_vector);    
+            iInfo=IntersectionInfo();
+            mx=-1;
+            iInfo_temp=IntersectionInfo();
+#            ###find nearest intersection
+#            for i,triangle in enumerate(self.model.triangles):
+#                (isIntersect,iInfo_temp)=triangle.intersect(ray);
+#                if isIntersect:    
+#                    #print("intersection_temp in outer loop")
+#                    #print(iInfo_temp)
+#                    d=(iInfo_temp.icoordinate-ray.p).magnitude_squared();
+#                    if mx==-1 or d<mx:
+#                        iInfo=iInfo_temp;
+#                        iInfo.triangleID=i;
+#                        mx=d;
+            ###find farest intersection
+            for i,triangle in enumerate(self.model.triangles):
+                (isIntersect,iInfo_temp)=triangle.intersect(ray);
+                if isIntersect:    
+                    #print("intersection_temp in outer loop")
+                    #print(iInfo_temp)
+                    d=(iInfo_temp.icoordinate-ray.p).magnitude_squared();
+                    if d>mx:
+                        iInfo=iInfo_temp;
+                        iInfo.triangleID=i;
+                        mx=d;
+            if mx>-1:
+                if len(self.iInfos)>0:
+                    self.connect(self.iInfos[-1],iInfo);
+                self.iInfos.append(iInfo);
+                self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
+#                self.find_CuttingVectors();
+#                print("cutting vector points:")
+#                print(self.cutting_vector_points)
+    
     def line_intersect(self,ray1,ray2):
         """
             find intersection point between two rays in 3D
@@ -136,7 +175,8 @@ class Ray_cast(object):
         for i,iInfo in enumerate(self.iInfos):
             mean_vector_proj=mean_vector-mean_vector.dot(iInfo.normal)/iInfo.normal.magnitude_squared()*(iInfo.normal);
             mean_vector_proj.normalize();
-            cut_end=iInfo.icoordinate+mean_vector_proj;
+            self.iInfos[i].cutting_vector=mean_vector_proj;
+            cut_end=iInfo.icoordinate+mean_vector_proj*self.cutting_vector_length;
             self.cutting_vector_points_by_mean.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
             self.cutting_vector_points_by_mean.extend((cut_end[0],cut_end[1],cut_end[2]));
             
@@ -147,7 +187,7 @@ class Ray_cast(object):
         for i in range(len(self.cutting_vector_points)//6,len(self.iInfos)-1):
             vector=self.generate_CuttingVector(self.iInfos[i],self.iInfos[i+1])
             self.iInfos[i].cutting_vector=vector;
-            cut_end=self.iInfos[i].icoordinate+vector;
+            cut_end=self.iInfos[i].icoordinate+vector*self.cutting_vector_length;
             self.cutting_vector_points.extend((self.iInfos[i].icoordinate[0],self.iInfos[i].icoordinate[1],self.iInfos[i].icoordinate[2]));
             self.cutting_vector_points.extend((cut_end[0],cut_end[1],cut_end[2]));
        
@@ -261,12 +301,13 @@ class Ray_cast(object):
         pyglet.graphics.draw(len(self.points)//3,gl.GL_POINTS,('v3f',self.points));
         if len(self.points)//3>1:
             pyglet.graphics.draw(len(self.points)//3,gl.GL_LINE_STRIP,('v3f',self.points));
-            gl.glColor4f(*cutting_vector_color);
-            pyglet.graphics.draw(len(self.cutting_vector_points)//3,gl.GL_LINES,('v3f',self.cutting_vector_points));
-        if self.end:
-            gl.glColor4f(*cutting_vector_by_mean_color);
-            pyglet.graphics.draw(len(self.cutting_vector_points_by_mean)//3,gl.GL_LINES,('v3f',self.cutting_vector_points_by_mean));
-        
+            if self.end:
+                gl.glColor4f(*cutting_vector_by_mean_color);
+                pyglet.graphics.draw(len(self.cutting_vector_points_by_mean)//3,gl.GL_LINES,('v3f',self.cutting_vector_points_by_mean));
+            else:
+                gl.glColor4f(*cutting_vector_color);
+                pyglet.graphics.draw(len(self.cutting_vector_points)//3,gl.GL_LINES,('v3f',self.cutting_vector_points));
+            
 
 #    def find_center(self):
 #        """
