@@ -29,7 +29,10 @@ class Window(pyglet.window.Window):
         gl.glClearColor(*black)
 
         # pre-loaded models
-        self.model_names = ['box.obj', 'uv_sphere.obj', 'monkey.obj','Model.obj']
+#        self.model_names = ['box.obj', 'uv_sphere.obj', 'monkey.obj']
+#        self.model_names = ['box.obj', 'uv_sphere.obj', 'monkey.obj','Model.obj']
+        self.model_names = ['skull_defect.obj','implant.obj']
+
 #        self.model_names = ['Model.obj']
         
         self.models = []
@@ -44,7 +47,8 @@ class Window(pyglet.window.Window):
         #ray_casting
         self.ray_casting=Ray_cast(self.current_model);
         self.camera=Camera();
-        
+        #keep ray_casting as previous one
+        self.keep=False;
 
         @self.event
         def on_resize(width, height):
@@ -84,24 +88,50 @@ class Window(pyglet.window.Window):
                 if self.current_model.texture is not None:
                     gl.glEnable(self.current_model.texture.target);
                     gl.glBindTexture(self.current_model.texture.target, self.current_model.texture.id);
-                self.ray_casting=Ray_cast(self.current_model);        
+                if self.keep==False:
+                    prev_iInfos=self.ray_casting.iInfos;
+                    self.ray_casting=Ray_cast(self.current_model);
+                    self.ray_casting.prev_iInfos=prev_iInfos;
+                    
+                    
             elif symbol == pyglet.window.key.LEFT:
                 # previous model
                 self.model_index = (self.model_index - 1) % len(self.model_names)
                 self.current_model = self.models[self.model_index]
-                self.ray_casting=Ray_cast(self.current_model);
+                if self.keep==False:
+                    prev_iInfos=self.ray_casting.iInfos;
+                    self.ray_casting=Ray_cast(self.current_model);
+                    self.ray_casting.prev_iInfos=prev_iInfos;
+                    
             # press F1 or F2 key to switch mode
             if symbol ==pyglet.window.key.F1:
                 self.mode="view";
+                print("==========view mode==========")
             if symbol==pyglet.window.key.F2:
                 self.mode="draw";
-            # press F3 key to find cutting vector by center
+                print("==========draw mode==========")
+            # press F3 key to find cutting vector by mean vector
             if symbol==pyglet.window.key.F3:
                 self.ray_casting.end=True;
                 self.ray_casting.find_CuttingVectorByMean();
-            # press F5 to resume to initial view
+                print("==========find cutting vectors by mean vector==========")
+            # press F4 to keep intersection info
+            if symbol==pyglet.window.key.F4:
+                self.keep=True;
+                print("==========keep previous ray casting==========")
+            # press F5 to find intersections on new model
             if symbol==pyglet.window.key.F5:
+                self.ray_casting.intersect_on_new_model();
+                print("==========find intersection on new model==========")
+
+            # press F6 to resume to initial view
+            if symbol==pyglet.window.key.F6:
                 self.camera.view();
+                print("==========initial view==========")
+                
+            # press F10 to print info
+            if symbol==pyglet.window.key.F10:
+                print(self.ray_casting.prev_iInfos)
                 
         
         @self.event
