@@ -57,8 +57,10 @@ class Window(pyglet.window.Window):
             # sets the projection
             gl.glMatrixMode(gl.GL_PROJECTION)
             gl.glLoadIdentity()
-            glu.gluPerspective(60, width / float(height), 0.1, 10000)
-            self.camera.view();
+            glu.gluPerspective(self.camera.init_camera_param.fov, width / float(height), 0.1, 10000)
+            print(self.camera.init_camera_param.fov)
+            # set the model view
+            self.camera.init_view();
             return pyglet.event.EVENT_HANDLED
 
         @self.event
@@ -126,7 +128,12 @@ class Window(pyglet.window.Window):
 
             # press F6 to resume to initial view
             if symbol==pyglet.window.key.F6:
-                self.camera.view();
+                # sets the projection
+                gl.glMatrixMode(gl.GL_PROJECTION)
+                gl.glLoadIdentity()
+                glu.gluPerspective(self.camera.init_camera_param.fov, width / float(height), 0.1, 10000)
+                # set the model view
+                self.camera.init_view();
                 print("==========initial view==========")
                 
             # press F10 to print info
@@ -137,6 +144,12 @@ class Window(pyglet.window.Window):
         @self.event
         def on_mouse_scroll(x, y, scroll_x, scroll_y):
             self.camera.zoom(scroll_y);
+            # set the projection
+            gl.glMatrixMode(gl.GL_PROJECTION);
+            gl.glLoadIdentity();
+            glu.gluPerspective(self.camera.camera_param.fov, width / float(height), 0.1, 10000);
+            #set model view
+            self.camera.view();
 
         @self.event
         def on_mouse_drag(x, y, dx, dy, button, modifiers):
