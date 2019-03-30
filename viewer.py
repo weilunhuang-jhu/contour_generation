@@ -18,18 +18,10 @@ from camera import Camera
 from ray import IntersectionInfo
 from ray import Ray_cast
 
-tm = trimesh.load_mesh('./obj/monkey.obj');
+tm = trimesh.load_mesh('./obj/Model.obj');
 mesh = pyrender.Mesh.from_trimesh(tm);
 
-#m = pyrender.Mesh.from_points(pts, colors=colors)
-sm = trimesh.creation.uv_sphere(radius=0.1)
-sm.visual.vertex_colors = [1.0, 0.0, 0.0]
 
-#mesh_pose=np.array([
-#    [1, 0,   0,   0],
-#    [0,  1, 0.0, 0.0],
-#    [0.0,  0,   1.0,  0],
-#    [0.0,  0.0, 0.0, 1.0] ])
 scene = pyrender.Scene();
 camera = pyrender.PerspectiveCamera(yfov=1.0);
 camera_pose=np.array([
@@ -37,8 +29,8 @@ camera_pose=np.array([
     [0,  1, 0.0, 0.0],
     [0.0,  0,   1.0,   5],
     [0.0,  0.0, 0.0, 1.0] ])
-scene.add(mesh,name="mymesh");
-scene.add(camera,pose=camera_pose);
+scene.add(mesh, name="modelmesh");
+scene.add(camera,pose=camera_pose,name="mycamera");
 
 default_mode="view";
         
@@ -49,6 +41,7 @@ class MyViewer(pyrender.Viewer):
         self.mode=default_mode;
         #ray_casting
         self.ray_casting=Ray_cast(self.mesh);
+        self.pointmesh_node=None;
         #keep ray_casting as previous one
         self.keep=False;
         super().__init__(scene, viewport_size,render_flags, viewer_flags,registered_keys, run_in_thread, **kwargs);
@@ -113,20 +106,24 @@ class MyViewer(pyrender.Viewer):
             
             isIntersect=self.ray_casting.intersect(ray);
             print(isIntersect)
+            #update if isIntersect
             if isIntersect:
-                points=self.ray_casting.draw();
-#                colors=np.random.uniform(size=points.shape);
-#                temp=pyrender.Mesh.from_points(points,colors=colors);
-                
-                tfs = np.tile(np.eye(4), (len(points), 1, 1))
-                tfs[:,:3,3] = points
-                m = pyrender.Mesh.from_trimesh(sm, poses=tfs)
-
-                
+                #get mesh of points from ray_casting
+                point_mesh=self.ray_casting.draw();
+                #lock render, remove existing pointmesh node, add new pointmesh node, release lock 
                 self.render_lock.acquire();
-                self.scene.add(m);
+                if self.pointmesh_node!=None:
+                    self.scene.remove_node(self.pointmesh_node);
+                self.scene.add(point_mesh,name="pointmesh");
                 self.render_lock.release();
-                print(points)
+            
+            #reassign self.pointmesh_node
+            temp=list(self.scene.nodes)
+            for i in range(len(temp)):
+                if temp[i].name=="pointmesh":
+                    self.pointmesh_node=temp[i];
+            print(len(self.scene.nodes))
+            
                 
                 
 #            print("location")

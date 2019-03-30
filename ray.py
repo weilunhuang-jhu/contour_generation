@@ -8,6 +8,7 @@ Created on Fri Jan 18 15:50:35 2019
 import euclid
 import pyglet
 import numpy as np
+import trimesh
 import pyrender
 from intersection_info import IntersectionInfo
 from pyglet.gl import gl
@@ -16,6 +17,13 @@ from pyglet.gl import gl
 cutting_vector_color=(1,0,0,1)
 #cutting_vector_by_center_color=(0,1,0,1)
 cutting_vector_by_mean_color=(0,1,0,1)
+
+#m = pyrender.Mesh.from_points(pts, colors=colors)
+
+#create point as a sphere in trimesh
+sm = trimesh.creation.uv_sphere(radius=0.001)
+sm.visual.vertex_colors = [1.0, 0.0, 0.0]
+
 
 # =============================================================================
 # Ray_cast Class, to do ray-castin, find connecting points along surface
@@ -290,7 +298,15 @@ class Ray_cast(object):
         pass;    
     def draw(self):
         #pass
-        return self.points;
+#        colors=np.random.uniform(size=points.shape);
+#        temp=pyrender.Mesh.from_points(points,colors=colors);
+                
+        tfs = np.tile(np.eye(4), (len(self.points), 1, 1));
+        tfs[:,:3,3] = self.points;
+        point_mesh = pyrender.Mesh.from_trimesh(sm, poses=tfs);
+        point_mesh.name="pointmesh";
+
+        return point_mesh;
 #        pyglet.graphics.draw(len(self.points)//3,gl.GL_POINTS,('v3f',self.points));
 #        if len(self.points)//3>1:
 #            pyglet.graphics.draw(len(self.points)//3,gl.GL_LINE_STRIP,('v3f',self.points));
