@@ -20,8 +20,20 @@ from ray import Ray_cast
 
 tm = trimesh.load_mesh('./obj/box.obj');
 mesh = pyrender.Mesh.from_trimesh(tm);
+#mesh_pose=np.array([
+#    [1, 0,   0,   0],
+#    [0,  1, 0.0, 0.0],
+#    [0.0,  0,   1.0,  0],
+#    [0.0,  0.0, 0.0, 1.0] ])
 scene = pyrender.Scene();
+camera = pyrender.PerspectiveCamera(yfov=1.0);
+camera_pose=np.array([
+    [1, 0,   0,   0],
+    [0,  1, 0.0, 0.0],
+    [0.0,  0,   1.0,   5],
+    [0.0,  0.0, 0.0, 1.0] ])
 scene.add(mesh);
+scene.add(camera,pose=camera_pose)
 
 default_mode="view";
         
@@ -80,34 +92,31 @@ class MyViewer(pyrender.Viewer):
         if self.mode=="draw":
             print('MOUSE PRESSED!')
             w,h=self.get_size();
-#                M_proj=(gl.GLfloat*16)();
-#                M_modelview=(gl.GLfloat*16)();
-#                gl.glGetFloatv(gl.GL_PROJECTION_MATRIX,M_proj);
-#                gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX,M_modelview);
-#                M_proj=euclid.Matrix4.new(*(list(M_proj)));
-#                M_modelview=euclid.Matrix4.new(*(list(M_modelview)));
-#                print(M_proj);
-#                print(M_modelview);
-#                print(M_modelview.inverse());
-#                for triangle in self.current_model.triangles: 
-#                    print(triangle.vertices);
-                
-#                print(w)
-#                print(h)
-#                print(x)
-#                print(y)
+
             
             M_proj=self.scene.main_camera_node.camera.get_projection_matrix(w,h);
-            M_modelview=self.scene.get_pose(self.scene.main_camera_node);
-#            M_proj=M_proj.T.reshape(16);
-#            M_modelview=M_modelview.T.reshape(16);
-#            print(list(M_proj))
-#            print(list(M_modelview))
-            ray=self.ray_casting.build_ray(x,y,buttons,w,h,M_proj,M_modelview);
+            M_modelview_inversed=self.scene.get_pose(self.scene.main_camera_node);
+            
+            print("M_proj")
+            print(M_proj)
+            print("M_modelview_inversed")
+            print(M_modelview_inversed)
+            
+            
+#            list_temp=list(self.scene.nodes);
+#            for i in range(len(self.scene.nodes)):
+#                print(list_temp[i].name)
+            
+            M_proj=M_proj.T.reshape(16);
+            M_modelview_inversed =M_modelview_inversed.T.reshape(16);
+#
+#            
+##            self.ray_casting.build_ray(x,y,buttons,w,h,M_proj,M_modelview);
+            ray=self.ray_casting.build_ray(x,y,buttons,w,h,M_proj, M_modelview_inversed);
             print(ray)
-            
-            
-            
+##            
+##            
+##            
             ray_origins=np.array([ray.p[0],ray.p[1],ray.p[2]]);
             ray_origins=ray_origins.reshape((1,3));
             ray_directions=np.array([ray.v[0],ray.v[1],ray.v[2]]);
@@ -115,6 +124,7 @@ class MyViewer(pyrender.Viewer):
             locations, index_ray, index_tri = self.mesh.ray.intersects_location(ray_origins=ray_origins, ray_directions=ray_directions, multiple_hits=False)
             print("locations")
             print(locations)
+#            print(self.mesh.centroid)
             
             
             

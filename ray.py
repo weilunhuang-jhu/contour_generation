@@ -32,7 +32,7 @@ class Ray_cast(object):
         self.cutting_vector_length=20;
         self.end=False;
     
-    def build_ray(self,mouse_x,mouse_y,button,w,h,M_proj,M_modelview):
+    def build_ray(self,mouse_x,mouse_y,button,w,h,M_proj,M_modelview_inversed):
         """
             build ray: from mouse position to a 3D ray (in world coordinate) starting from camera eye position
         """
@@ -41,37 +41,48 @@ class Ray_cast(object):
         y=2*mouse_y/h-1;
         #call projection matrix and model view matrix
         
-#        M_proj=euclid.Matrix4.new(*(M_proj));
-#        M_proj_inversed=M_proj.inverse();
-#        M_modelview=euclid.Matrix4.new(*(M_modelview));
-#        M_modelview_inversed=M_modelview.inverse();
-        M_proj_inversed=ln.inv(M_proj);
-        M_modelview_inversed=ln.inv(M_modelview);
+#        M_proj_inversed_temp=ln.inv(M_proj);
+#        M_modelview_inversed_temp=ln.inv(M_modelview);
+        
+        
+        M_proj=euclid.Matrix4.new(*(M_proj));
+        M_proj_inversed=M_proj.inverse();
+        M_modelview_inversed=euclid.Matrix4.new(*(M_modelview_inversed));
+        #M_modelview=M_modelview_inversed.inverse();
+#        print("M_proj in func")
+#        print(M_proj)
+#        print("M_modelview in func")
+#        print(M_modelview)
+#        print("M_proj_inversed_temp")
+#        print(M_proj_inversed_temp)
+#        print("M_proj_inversed")
+#        print(M_proj_inversed)
+#        print("M_modelview_inversed_temp")
+#        print(M_modelview_inversed_temp)
+#        print("M_modelview_inversed")
+#        print(M_modelview_inversed)
+        
         #homogeneous clip coordinates
-#        vector_clip=euclid.Vector3(x,y,-1);
-        vector_clip=np.array([x,y,-1,1]).reshape((4,1));
+        vector_clip=euclid.Vector3(x,y,-1);
+#        vector_clip=np.array([x,y,-1,1]).reshape((4,1));
         
         #eye coordinates
-#        vector_eye=M_proj_inversed*vector_clip;
-#        vector_eye=euclid.Vector3(vector_eye[0],vector_eye[1],-1);
-        vector_eye=np.matmul(M_proj_inversed,vector_clip);
-        vector_eye=np.array([vector_eye[0],vector_eye[1],-1,1]).reshape((4,1)).astype(np.float);
-        print(vector_eye)
+        vector_eye=M_proj_inversed*vector_clip;
+        vector_eye=euclid.Vector3(vector_eye[0],vector_eye[1],-1);
+#        vector_eye=np.matmul(M_proj_inversed,vector_clip);
+#        vector_eye=np.array([vector_eye[0],vector_eye[1],-1,1]).reshape((4,1)).astype(np.float);
+#        print(vector_eye)
+        
         #world coordinates
-#        vector_world=M_modelview_inversed*vector_eye;
-#        vector_world.normalize();
-        vector_world=np.matmul(M_modelview_inversed,vector_eye);
-        vector_world=euclid.Vector3(vector_world[0],vector_world[1],vector_world[2]);
+        vector_world=M_modelview_inversed*vector_eye;
         vector_world.normalize();
+#        vector_world=np.matmul(M_modelview_inversed,vector_eye);
+#        vector_world=euclid.Vector3(vector_world[0],vector_world[1],vector_world[2]);
+#        vector_world.normalize();
 #        print(vector_world);
-        print("modelview")
-        print(M_modelview)
-        print(M_modelview_inversed);
-        print("proj")
-        print(M_proj)
-        print(M_proj_inversed);
+        
         #build ray, starting point is camera eye position
-        ray=euclid.Ray3(euclid.Point3(M_modelview_inversed[0,3],M_modelview_inversed[1,3],M_modelview_inversed[2,3]),vector_world);
+        ray=euclid.Ray3(euclid.Point3(M_modelview_inversed[12],M_modelview_inversed[13],M_modelview_inversed[14]),vector_world);
         return ray;
     def toColumnMajor(M):
         pass
