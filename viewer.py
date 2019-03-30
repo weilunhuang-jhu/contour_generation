@@ -18,8 +18,13 @@ from camera import Camera
 from ray import IntersectionInfo
 from ray import Ray_cast
 
-tm = trimesh.load_mesh('./obj/box.obj');
+tm = trimesh.load_mesh('./obj/monkey.obj');
 mesh = pyrender.Mesh.from_trimesh(tm);
+
+#m = pyrender.Mesh.from_points(pts, colors=colors)
+sm = trimesh.creation.uv_sphere(radius=0.1)
+sm.visual.vertex_colors = [1.0, 0.0, 0.0]
+
 #mesh_pose=np.array([
 #    [1, 0,   0,   0],
 #    [0,  1, 0.0, 0.0],
@@ -32,8 +37,8 @@ camera_pose=np.array([
     [0,  1, 0.0, 0.0],
     [0.0,  0,   1.0,   5],
     [0.0,  0.0, 0.0, 1.0] ])
-scene.add(mesh);
-scene.add(camera,pose=camera_pose)
+scene.add(mesh,name="mymesh");
+scene.add(camera,pose=camera_pose);
 
 default_mode="view";
         
@@ -87,59 +92,51 @@ class MyViewer(pyrender.Viewer):
         super().on_key_press(symbol, modifiers)
         
     def on_mouse_press(self, x, y, buttons, modifiers):
-        #super(MyViewer, self).on_mouse_press(x, y, buttons, modifiers)
         
         if self.mode=="draw":
-            print('MOUSE PRESSED!')
             w,h=self.get_size();
 
-            
+            #get projection matrix and inversed modelview matrix
             M_proj=self.scene.main_camera_node.camera.get_projection_matrix(w,h);
             M_modelview_inversed=self.scene.get_pose(self.scene.main_camera_node);
             
-            print("M_proj")
-            print(M_proj)
-            print("M_modelview_inversed")
-            print(M_modelview_inversed)
+#            print("M_proj")
+#            print(M_proj)
+#            print("M_modelview_inversed")
+#            print(M_modelview_inversed)
             
-            
-#            list_temp=list(self.scene.nodes);
-#            for i in range(len(self.scene.nodes)):
-#                print(list_temp[i].name)
-            
+            #reshape and pass two matrices to ray_casting
             M_proj=M_proj.T.reshape(16);
             M_modelview_inversed =M_modelview_inversed.T.reshape(16);
-#
-#            
-##            self.ray_casting.build_ray(x,y,buttons,w,h,M_proj,M_modelview);
             ray=self.ray_casting.build_ray(x,y,buttons,w,h,M_proj, M_modelview_inversed);
-            print(ray)
-##            
-##            
-##            
-            ray_origins=np.array([ray.p[0],ray.p[1],ray.p[2]]);
-            ray_origins=ray_origins.reshape((1,3));
-            ray_directions=np.array([ray.v[0],ray.v[1],ray.v[2]]);
-            ray_directions=ray_directions.reshape((1,3));
-            locations, index_ray, index_tri = self.mesh.ray.intersects_location(ray_origins=ray_origins, ray_directions=ray_directions, multiple_hits=False)
-            print("locations")
-            print(locations)
-#            print(self.mesh.centroid)
             
             
-            
-#            iInfo=IntersectionInfo();
-#            (isIntersect,iInfo)=self.ray_casting.intersect(ray);
-#            if isIntersect:
-#                print("====================")
-#                print("iInfo in outest loop")
-#                print(iInfo.icoordinate);
-#                print("triangleID is")
-#                print(iInfo.triangleID)
+            isIntersect=self.ray_casting.intersect(ray);
+            print(isIntersect)
+            if isIntersect:
+                points=self.ray_casting.draw();
+#                colors=np.random.uniform(size=points.shape);
+#                temp=pyrender.Mesh.from_points(points,colors=colors);
+                
+                tfs = np.tile(np.eye(4), (len(points), 1, 1))
+                tfs[:,:3,3] = points
+                m = pyrender.Mesh.from_trimesh(sm, poses=tfs)
+
+                
+                self.render_lock.acquire();
+                self.scene.add(m);
+                self.render_lock.release();
+                print(points)
+                
+                
+#            print("location")
+#            print(iInfo.icoordinate.shape)
+#            print("triangleID")
+#            print(iInfo.triangleID.shape)
             
         super().on_mouse_press(x, y, buttons, modifiers)
         
-v = MyViewer(scene, use_raymond_lighting=True)   
+v = MyViewer(scene, use_raymond_lighting=True);   
 
   
 #class Window(pyglet.window.Window):

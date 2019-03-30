@@ -8,11 +8,11 @@ Created on Fri Jan 18 15:50:35 2019
 import euclid
 import pyglet
 import numpy as np
-import numpy.linalg as ln
+import pyrender
 from intersection_info import IntersectionInfo
 from pyglet.gl import gl
 
-point_color=(1,1,0,1)
+#point_color=(1,1,0,1)
 cutting_vector_color=(1,0,0,1)
 #cutting_vector_by_center_color=(0,1,0,1)
 cutting_vector_by_mean_color=(0,1,0,1)
@@ -23,7 +23,7 @@ cutting_vector_by_mean_color=(0,1,0,1)
 class Ray_cast(object):
     def __init__(self,model):
         self.model=model;
-        self.points=[];
+        self.points=None;
         self.cutting_vector_points=[];#consists of pairs of point and cut_end point
         #self.cutting_vector_points_by_center=[];
         self.cutting_vector_points_by_mean=[];
@@ -39,81 +39,48 @@ class Ray_cast(object):
         #viewport coordinates to normalized device coordinates
         x=2*mouse_x/w-1;
         y=2*mouse_y/h-1;
-        #call projection matrix and model view matrix
-        
-#        M_proj_inversed_temp=ln.inv(M_proj);
-#        M_modelview_inversed_temp=ln.inv(M_modelview);
-        
-        
+        #use projection matrix and inversed model view matrix        
         M_proj=euclid.Matrix4.new(*(M_proj));
         M_proj_inversed=M_proj.inverse();
         M_modelview_inversed=euclid.Matrix4.new(*(M_modelview_inversed));
-        #M_modelview=M_modelview_inversed.inverse();
-#        print("M_proj in func")
-#        print(M_proj)
-#        print("M_modelview in func")
-#        print(M_modelview)
-#        print("M_proj_inversed_temp")
-#        print(M_proj_inversed_temp)
-#        print("M_proj_inversed")
-#        print(M_proj_inversed)
-#        print("M_modelview_inversed_temp")
-#        print(M_modelview_inversed_temp)
-#        print("M_modelview_inversed")
-#        print(M_modelview_inversed)
         
         #homogeneous clip coordinates
         vector_clip=euclid.Vector3(x,y,-1);
-#        vector_clip=np.array([x,y,-1,1]).reshape((4,1));
         
         #eye coordinates
         vector_eye=M_proj_inversed*vector_clip;
         vector_eye=euclid.Vector3(vector_eye[0],vector_eye[1],-1);
-#        vector_eye=np.matmul(M_proj_inversed,vector_clip);
-#        vector_eye=np.array([vector_eye[0],vector_eye[1],-1,1]).reshape((4,1)).astype(np.float);
-#        print(vector_eye)
         
         #world coordinates
         vector_world=M_modelview_inversed*vector_eye;
         vector_world.normalize();
-#        vector_world=np.matmul(M_modelview_inversed,vector_eye);
-#        vector_world=euclid.Vector3(vector_world[0],vector_world[1],vector_world[2]);
-#        vector_world.normalize();
-#        print(vector_world);
         
         #build ray, starting point is camera eye position
         ray=euclid.Ray3(euclid.Point3(M_modelview_inversed[12],M_modelview_inversed[13],M_modelview_inversed[14]),vector_world);
         return ray;
-    def toColumnMajor(M):
-        pass
         
     def intersect(self,ray):
         """
             find intersection between ray and mesh model
         """
+        isIntersect=False;
         iInfo=IntersectionInfo();
-        mx=-1;
-        iInfo_temp=IntersectionInfo();
-        for i,triangle in enumerate(self.model.triangles):
-            (isIntersect,iInfo_temp)=triangle.intersect(ray);
-            if isIntersect:    
-                #print("intersection_temp in outer loop")
-                #print(iInfo_temp)
-                d=(iInfo_temp.icoordinate-ray.p).magnitude_squared();
-                if mx==-1 or d<mx:
-                    iInfo=iInfo_temp;
-                    iInfo.triangleID=i;
-                    mx=d;
-        if mx>-1:
-            
-            if len(self.iInfos)>0:
-                self.connect(self.iInfos[-1],iInfo);
+        ray_origins=np.array([ray.p[0],ray.p[1],ray.p[2]]);
+        ray_origins=ray_origins.reshape((1,3));
+        ray_directions=np.array([ray.v[0],ray.v[1],ray.v[2]]);
+        ray_directions=ray_directions.reshape((1,3));
+        locations, index_ray, index_tri = self.model.ray.intersects_location(ray_origins=ray_origins, ray_directions=ray_directions, multiple_hits=False)
+        iInfo.icoordinate=locations;
+        iInfo.triangleID=index_tri;
+        #record points and iInfo if there is intersection
+        if index_tri.shape[0]>0:
+            isIntersect=True;
             self.iInfos.append(iInfo);
-            self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
-            self.find_CuttingVectors();
-            print("cutting vector points:")
-            print(self.cutting_vector_points)
-        return (mx>-1,iInfo);
+            if self.points is None:
+                self.points=iInfo.icoordinate;
+            else:
+                self.points=np.concatenate((self.points,iInfo.icoordinate));
+        return isIntersect;
     
     def intersect_on_new_model(self):
         for prev_iInfo in self.prev_iInfos:
@@ -323,47 +290,13 @@ class Ray_cast(object):
         pass;    
     def draw(self):
         #pass
-        gl.glColor4f(*point_color);
-        gl.glPointSize(5)
-        pyglet.graphics.draw(len(self.points)//3,gl.GL_POINTS,('v3f',self.points));
-        if len(self.points)//3>1:
-            pyglet.graphics.draw(len(self.points)//3,gl.GL_LINE_STRIP,('v3f',self.points));
-            if self.end:
-                gl.glColor4f(*cutting_vector_by_mean_color);
-                pyglet.graphics.draw(len(self.cutting_vector_points_by_mean)//3,gl.GL_LINES,('v3f',self.cutting_vector_points_by_mean));
-            else:
-                gl.glColor4f(*cutting_vector_color);
-                pyglet.graphics.draw(len(self.cutting_vector_points)//3,gl.GL_LINES,('v3f',self.cutting_vector_points));
-            
-
-#    def find_center(self):
-#        """
-#            find center point of all intersection points
-#        """
-#        point=euclid.Point3(0,0,0)
-#        for iInfo in self.iInfos:
-#            point+=iInfo.icoordinate;
-#        return point/len(self.iInfos);
-#
-#    def find_CuttingVectorByCenter(self):
-#        """
-#            find cutting vector on intersection point defined by center,
-#            only called after a ring of points are generated 
-#        """
-#        center=self.find_center();
-#        vector=euclid.Vector3(0,0,0);
-#        for i,iInfo in enumerate(self.iInfos):
-#            d=center-iInfo.icoordinate;
-#            d.normalize();
-#            #check if d and triangle normal are not almost parallel
-#            if d.dot(iInfo.normal)<0.95:
-#                #get projected vector of d on triangle
-#                d_proj=d-d.dot(iInfo.normal)/iInfo.normal.magnitude_squared()*(iInfo.normal);
-#                d_proj.normalize();
-#                vector=d_proj;
+        return self.points;
+#        pyglet.graphics.draw(len(self.points)//3,gl.GL_POINTS,('v3f',self.points));
+#        if len(self.points)//3>1:
+#            pyglet.graphics.draw(len(self.points)//3,gl.GL_LINE_STRIP,('v3f',self.points));
+#            if self.end:
+#                gl.glColor4f(*cutting_vector_by_mean_color);
+#                pyglet.graphics.draw(len(self.cutting_vector_points_by_mean)//3,gl.GL_LINES,('v3f',self.cutting_vector_points_by_mean));
 #            else:
-#                print("d and triangle normal are almost parallel!");
-#                vector=iInfo.cutting_vector;
-#            cut_end=iInfo.icoordinate+vector;
-#            self.cutting_vector_points_by_center.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
-#            self.cutting_vector_points_by_center.extend((cut_end[0],cut_end[1],cut_end[2]));
+#                gl.glColor4f(*cutting_vector_color);
+#                pyglet.graphics.draw(len(self.cutting_vector_points)//3,gl.GL_LINES,('v3f',self.cutting_vector_points));
