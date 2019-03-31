@@ -10,6 +10,7 @@ import pyglet
 import numpy as np
 import trimesh
 import pyrender
+import networkx as nx
 from intersection_info import IntersectionInfo
 from pyglet.gl import gl
 
@@ -77,17 +78,22 @@ class Ray_cast(object):
         ray_origins=ray_origins.reshape((1,3));
         ray_directions=np.array([ray.v[0],ray.v[1],ray.v[2]]);
         ray_directions=ray_directions.reshape((1,3));
+        #use ray.intersects_location() in trimesh to find intersection
         locations, index_ray, index_tri = self.model.ray.intersects_location(ray_origins=ray_origins, ray_directions=ray_directions, multiple_hits=False)
-        iInfo.icoordinate=locations;
-        iInfo.triangleID=index_tri;
         #record points and iInfo if there is intersection
         if index_tri.shape[0]>0:
             isIntersect=True;
+            iInfo.icoordinate=euclid.Point3(locations[0,0],locations[0,1],locations[0,2]);
+            iInfo.triangleID=index_tri[0];
+            iInfo.normal=euclid.Vector3(self.model.face_normals[index_tri,0],self.model.face_normals[index_tri,1],self.model.face_normals[index_tri,2]);
+        
+            if len(self.iInfos)>0:
+                self.connect(self.iInfos[-1],iInfo);
             self.iInfos.append(iInfo);
             if self.points is None:
-                self.points=iInfo.icoordinate;
+                self.points=locations;
             else:
-                self.points=np.concatenate((self.points,iInfo.icoordinate));
+                self.points=np.concatenate((self.points,locations));
         return isIntersect;
     
     def intersect_on_new_model(self):
@@ -202,9 +208,14 @@ class Ray_cast(object):
         ###find connecting point
         t=-1;
         triangle=self.model.triangles[iInfo.triangleID];
-        rays=[euclid.Ray3(triangle.vertices[0],triangle.vertices[1]),\
-              euclid.Ray3(triangle.vertices[1],triangle.vertices[2]),\
-              euclid.Ray3(triangle.vertices[2],triangle.vertices[0])]
+        vertex0=euclid.Point3(triangle[0,0],triangle[0,1],triangle[0,2]);
+        vertex1=euclid.Point3(triangle[1,0],triangle[1,1],triangle[1,2]);
+        vertex2=euclid.Point3(triangle[2,0],triangle[2,1],triangle[2,2]);
+        
+        
+        rays=[euclid.Ray3(vertex0,vertex1),\
+              euclid.Ray3(vertex1,vertex2),\
+              euclid.Ray3(vertex2,vertex0)]
         #iterate edges in triangle to find closest intersection for ray_proj
         #and update iInfo
         ray_id=0;
@@ -216,11 +227,12 @@ class Ray_cast(object):
                 t=t_temp;
                 iInfo.icoordinate=iInfo_temp.icoordinate;
                 ray_id=i;
-        #iterate self.model.triangles to find next triangleID
-        for i,tri_temp in enumerate(self.model.triangles):
+        #find next triangleID
+        triangle=self.model.faces[iInfo.triangleID];
+        for i,tri_temp in enumerate(self.model.faces):
             #find triangle that consists of two vertice to build ray
             #and find triangle whose ID is not yet in triangle_dic
-            if triangle.vertex_indices[ray_id] in tri_temp.vertex_indices and triangle.vertex_indices[(ray_id+1)%3] in tri_temp.vertex_indices and i not in triangle_dic:
+            if triangle[ray_id] in tri_temp and triangle[(ray_id+1)%3] in tri_temp and i not in triangle_dic:
                 iInfo.triangleID=i;
                 break;
         return (t,ray_id);
@@ -241,14 +253,18 @@ class Ray_cast(object):
         iInfo_prev=iInfo.copy();
         counter=0;
         
+#        print("triangles")
+#        print(self.model.triangles);
+#        print(self.model.triangles.shape)
+#        print("faces")
+#        print(self.model.faces)
+#        print(self.model.faces.shape)
+        
         while(iInfo.triangleID!=iInfo_end.triangleID):
             
             triangle_dic[iInfo.triangleID]=counter;
             print("triangle Info:")
             print("triangleID is "+str(iInfo.triangleID))
-            print("vertices:")
-            print(self.model.triangles[iInfo.triangleID].vertex_indices)
-            print(self.model.triangles[iInfo.triangleID].vertices);
             
             counter+=1;
             #check if triangle normal is too close to previous triangle normal
@@ -285,15 +301,18 @@ class Ray_cast(object):
                 print("error: wrong triangle found")
                 break;
             #update iInfo.normal
-            iInfo.normal=self.model.triangles[iInfo.triangleID].plane.n;
-            
+            iInfo.normal=euclid.Vector3(self.model.face_normals[iInfo.triangleID,0],\
+                                        self.model.face_normals[iInfo.triangleID,1],\
+                                        self.model.face_normals[iInfo.triangleID,2]);
+        
             print('connecting point'+str(counter)+" inside triangle"+str(iInfo.triangleID));
             print(iInfo.icoordinate);
             
             iInfoTemp=iInfo.copy();
             self.iInfos.append(iInfoTemp);
-            self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
-           
+            new_point=np.array([iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]]).reshape((1,3));
+            self.points=np.concatenate((self.points,new_point));
+            
     def spline(self):
         pass;    
     def draw(self):

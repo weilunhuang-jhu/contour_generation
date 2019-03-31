@@ -122,14 +122,6 @@ class MyViewer(pyrender.Viewer):
             for i in range(len(temp)):
                 if temp[i].name=="pointmesh":
                     self.pointmesh_node=temp[i];
-            print(len(self.scene.nodes))
-            
-                
-                
-#            print("location")
-#            print(iInfo.icoordinate.shape)
-#            print("triangleID")
-#            print(iInfo.triangleID.shape)
             
         super().on_mouse_press(x, y, buttons, modifiers)
         
