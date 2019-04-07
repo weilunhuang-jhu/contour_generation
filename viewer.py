@@ -41,7 +41,8 @@ class MyViewer(pyrender.Viewer):
         self.mode=default_mode;
         #ray_casting
         self.ray_casting=Ray_cast(self.mesh);
-        self.pointmesh_node=None;
+        self.point_mesh_node=None;
+        self.cutting_vector_mesh_node=None;
         #keep ray_casting as previous one
         self.keep=False;
         super().__init__(scene, viewport_size,render_flags, viewer_flags,registered_keys, run_in_thread, **kwargs);
@@ -108,20 +109,39 @@ class MyViewer(pyrender.Viewer):
             print(isIntersect)
             #update if isIntersect
             if isIntersect:
-                #get mesh of points from ray_casting
-                point_mesh=self.ray_casting.draw();
-                #lock render, remove existing pointmesh node, add new pointmesh node, release lock 
-                self.render_lock.acquire();
-                if self.pointmesh_node!=None:
-                    self.scene.remove_node(self.pointmesh_node);
-                self.scene.add(point_mesh,name="pointmesh");
-                self.render_lock.release();
+                #get mesh from ray_casting
+                meshes=self.ray_casting.draw();
+                if len(meshes)==1:
+                    point_mesh=meshes[0];
+                    #lock render, remove existing pointmesh node, add new pointmesh node, release lock 
+                    self.render_lock.acquire();
+                    if self.point_mesh_node!=None:
+                        self.scene.remove_node(self.point_mesh_node);
+                    self.scene.add(point_mesh,name="point_mesh");
+                    self.render_lock.release();
+            
+                elif len(meshes)==2:
+                    print("===============")
+                    print("cutting vector found")
+                    point_mesh=meshes[0];
+                    cutting_vector_mesh=meshes[1];                    
+                    #lock render, remove existing pointmesh node, add new pointmesh node, release lock 
+                    self.render_lock.acquire();
+                    if self.point_mesh_node is not None:
+                        self.scene.remove_node(self.point_mesh_node);
+                    if self.cutting_vector_mesh_node is not None:
+                        self.scene.remove_node(self.cutting_vector_mesh_node);
+                    self.scene.add(point_mesh,name="point_mesh");
+                    self.scene.add(cutting_vector_mesh,name="cutting_vector_mesh");
+                    self.render_lock.release();
             
             #reassign self.pointmesh_node
             temp=list(self.scene.nodes)
             for i in range(len(temp)):
-                if temp[i].name=="pointmesh":
-                    self.pointmesh_node=temp[i];
+                if temp[i].name=="point_mesh":
+                    self.point_mesh_node=temp[i];
+                elif temp[i].name=="cutting_vector_mesh":
+                    self.cutting_vector_mesh_node=temp[i];
             
         super().on_mouse_press(x, y, buttons, modifiers)
         

@@ -10,19 +10,18 @@ import pyglet
 import numpy as np
 import trimesh
 import pyrender
-import networkx as nx
+#import networkx as nx
 from intersection_info import IntersectionInfo
 from pyglet.gl import gl
 
-#point_color=(1,1,0,1)
-cutting_vector_color=(1,0,0,1)
-#cutting_vector_by_center_color=(0,1,0,1)
+point_color=np.array([1,0,0,1]).reshape((1,4));
+cutting_vector_color=np.array([0,0,1,1]).reshape((1,4));
 cutting_vector_by_mean_color=(0,1,0,1)
 
 #m = pyrender.Mesh.from_points(pts, colors=colors)
 
 #create point as a sphere in trimesh
-sm = trimesh.creation.uv_sphere(radius=0.001)
+sm = trimesh.creation.uv_sphere(radius=0.0003)
 sm.visual.vertex_colors = [1.0, 0.0, 0.0]
 
 
@@ -31,9 +30,9 @@ sm.visual.vertex_colors = [1.0, 0.0, 0.0]
 # =============================================================================    
 class Ray_cast(object):
     def __init__(self,model):
-        self.model=model;
+        self.model=model;# a trimesh object
         self.points=None;
-        self.cutting_vector_points=[];#consists of pairs of point and cut_end point
+        self.cutting_vector_points=None;#consists of pairs of point and cut_end point
         #self.cutting_vector_points_by_center=[];
         self.cutting_vector_points_by_mean=[];
         self.iInfos=[];
@@ -94,6 +93,7 @@ class Ray_cast(object):
                 self.points=locations;
             else:
                 self.points=np.concatenate((self.points,locations));
+            self.find_CuttingVectors();
         return isIntersect;
     
     def intersect_on_new_model(self):
@@ -192,13 +192,26 @@ class Ray_cast(object):
         """
             find cutting vector on intersection point
         """
-        for i in range(len(self.cutting_vector_points)//6,len(self.iInfos)-1):
+        if self.cutting_vector_points is None:
+            start_len=0;
+        else:
+            start_len=len(self.cutting_vector_points)//2;
+            
+        for i in range(start_len,len(self.iInfos)-1):
             vector=self.generate_CuttingVector(self.iInfos[i],self.iInfos[i+1])
             self.iInfos[i].cutting_vector=vector;
             cut_end=self.iInfos[i].icoordinate+vector*self.cutting_vector_length;
-            self.cutting_vector_points.extend((self.iInfos[i].icoordinate[0],self.iInfos[i].icoordinate[1],self.iInfos[i].icoordinate[2]));
-            self.cutting_vector_points.extend((cut_end[0],cut_end[1],cut_end[2]));
-       
+            pairs=np.array([[self.iInfos[i].icoordinate[0],self.iInfos[i].icoordinate[1],self.iInfos[i].icoordinate[2]],\
+                            [cut_end[0],cut_end[1],cut_end[2]]]).reshape((2,3));
+    
+            if self.cutting_vector_points is None:
+                self.cutting_vector_points=pairs;
+            else:
+                print(self.cutting_vector_points.shape);
+                print(pairs.shape)
+                self.cutting_vector_points=np.concatenate((self.cutting_vector_points,pairs));
+                
+            
     def find_connect_point(self,iInfo,ray_proj,triangle_dic):
         """
             find vector on intersection point, called in connect()
@@ -320,18 +333,18 @@ class Ray_cast(object):
 #        colors=np.random.uniform(size=points.shape);
 #        temp=pyrender.Mesh.from_points(points,colors=colors);
                 
+        #create point_mesh
         tfs = np.tile(np.eye(4), (len(self.points), 1, 1));
         tfs[:,:3,3] = self.points;
         point_mesh = pyrender.Mesh.from_trimesh(sm, poses=tfs);
-        point_mesh.name="pointmesh";
-
-        return point_mesh;
-#        pyglet.graphics.draw(len(self.points)//3,gl.GL_POINTS,('v3f',self.points));
-#        if len(self.points)//3>1:
-#            pyglet.graphics.draw(len(self.points)//3,gl.GL_LINE_STRIP,('v3f',self.points));
-#            if self.end:
-#                gl.glColor4f(*cutting_vector_by_mean_color);
-#                pyglet.graphics.draw(len(self.cutting_vector_points_by_mean)//3,gl.GL_LINES,('v3f',self.cutting_vector_points_by_mean));
-#            else:
-#                gl.glColor4f(*cutting_vector_color);
-#                pyglet.graphics.draw(len(self.cutting_vector_points)//3,gl.GL_LINES,('v3f',self.cutting_vector_points));
+        point_mesh.name="point_mesh";
+        
+        #create cutting_vector_mesh
+        
+        if self.cutting_vector_points is not None:
+            cutting_vector_mesh=pyrender.Primitive(positions=self.cutting_vector_points,mode=1);
+            cutting_vector_mesh = pyrender.Mesh([cutting_vector_mesh]);
+            cutting_vector_mesh.name="cutting_vector_mesh";
+            return (point_mesh,cutting_vector_mesh);
+        else:
+            return (point_mesh,);
