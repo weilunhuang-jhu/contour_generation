@@ -97,8 +97,11 @@ class Ray_cast(object):
     def intersect_on_new_model(self):
         
         for i,iInfo in enumerate(self.iInfos):
-            if i==(len(self.iInfos)-1):
-                break;
+            print('i:',i);
+            print("len of self.iInfos:",len(self.iInfos));
+            print("len of self.iInfos_new:",len(self.iInfos_new));
+#            if i>(len(self.iInfos)-1):
+#                break;
             ray=euclid.Ray3(iInfo.icoordinate,-iInfo.cutting_vector);    
             
             iInfo_temp=IntersectionInfo();
@@ -319,10 +322,15 @@ class Ray_cast(object):
             print(iInfo.icoordinate);
             
             iInfoTemp=iInfo.copy();
-            self.iInfos.append(iInfoTemp);
-            new_point=np.array([iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]]).reshape((1,3));
-            self.points=np.concatenate((self.points,new_point));
-            
+            #check if on new model
+            if not self.on_new_model:
+                self.iInfos.append(iInfoTemp);
+                new_point=np.array([iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]]).reshape((1,3));
+                self.points=np.concatenate((self.points,new_point));
+            else:
+                self.iInfos_new.append(iInfoTemp);
+                new_point=np.array([iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]]).reshape((1,3));
+                self.points_new=np.concatenate((self.points_new,new_point));
     def spline(self):
         pass;    
     def draw(self):
@@ -352,7 +360,7 @@ class Ray_cast(object):
                     return (point_mesh,);
         else:
             #create point_mesh_new
-            tfs = np.tile(np.eye(4), (len(self.points), 1, 1));
+            tfs = np.tile(np.eye(4), (len(self.points_new), 1, 1));
             tfs[:,:3,3] = self.points_new;
             point_mesh_new = pyrender.Mesh.from_trimesh(sm, poses=tfs);
             point_mesh_new.name="point_mesh_new";
