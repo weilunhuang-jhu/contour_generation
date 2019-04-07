@@ -6,13 +6,11 @@ Created on Fri Jan 18 15:50:35 2019
 @author: weilunhuang
 """
 import euclid
-import pyglet
 import numpy as np
 import trimesh
 import pyrender
 #import networkx as nx
 from intersection_info import IntersectionInfo
-from pyglet.gl import gl
 
 point_color=np.array([1,0,0,1]).reshape((1,4));
 cutting_vector_color=np.array([0,0,1,1]).reshape((1,4));
@@ -21,7 +19,7 @@ cutting_vector_by_mean_color=(0,1,0,1)
 #m = pyrender.Mesh.from_points(pts, colors=colors)
 
 #create point as a sphere in trimesh
-sm = trimesh.creation.uv_sphere(radius=0.0003)
+sm = trimesh.creation.uv_sphere(radius=0.1)#0.0003 for Model.obj
 sm.visual.vertex_colors = [1.0, 0.0, 0.0]
 
 
@@ -32,14 +30,14 @@ class Ray_cast(object):
     def __init__(self,model):
         self.model=model;# a trimesh object
         self.points=None;
+        self.points_new=None;#for new model
         self.cutting_vector_points=None;#consists of pairs of point and cut_end point
-        #self.cutting_vector_points_by_center=[];
-        self.cutting_vector_points_by_mean=None;
+        self.cutting_vector_points_by_mean=None;#consists of pairs of point and cut_end point
         self.iInfos=[];
-        self.prev_iInfos=[];
+        self.iInfos_new=[];#for new model
         self.cutting_vector_length=20;
-        self.end=False;
-    
+        self.by_mean=False;
+        self.on_new_model=False;
     def build_ray(self,mouse_x,mouse_y,button,w,h,M_proj,M_modelview_inversed):
         """
             build ray: from mouse position to a 3D ray (in world coordinate) starting from camera eye position
@@ -97,41 +95,33 @@ class Ray_cast(object):
         return isIntersect;
     
     def intersect_on_new_model(self):
-        for prev_iInfo in self.prev_iInfos:
-            ray=euclid.Ray3(prev_iInfo.icoordinate,-prev_iInfo.cutting_vector);    
-            iInfo=IntersectionInfo();
-            mx=-1;
+        
+        for i,iInfo in enumerate(self.iInfos):
+            if i==(len(self.iInfos)-1):
+                break;
+            ray=euclid.Ray3(iInfo.icoordinate,-iInfo.cutting_vector);    
+            
             iInfo_temp=IntersectionInfo();
-#            ###find nearest intersection
-#            for i,triangle in enumerate(self.model.triangles):
-#                (isIntersect,iInfo_temp)=triangle.intersect(ray);
-#                if isIntersect:    
-#                    #print("intersection_temp in outer loop")
-#                    #print(iInfo_temp)
-#                    d=(iInfo_temp.icoordinate-ray.p).magnitude_squared();
-#                    if mx==-1 or d<mx:
-#                        iInfo=iInfo_temp;
-#                        iInfo.triangleID=i;
-#                        mx=d;
-            ###find farest intersection
-            for i,triangle in enumerate(self.model.triangles):
-                (isIntersect,iInfo_temp)=triangle.intersect(ray);
-                if isIntersect:    
-                    #print("intersection_temp in outer loop")
-                    #print(iInfo_temp)
-                    d=(iInfo_temp.icoordinate-ray.p).magnitude_squared();
-                    if d>mx:
-                        iInfo=iInfo_temp;
-                        iInfo.triangleID=i;
-                        mx=d;
-            if mx>-1:
-                if len(self.iInfos)>0:
-                    self.connect(self.iInfos[-1],iInfo);
-                self.iInfos.append(iInfo);
-                self.points.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
-#                self.find_CuttingVectors();
-#                print("cutting vector points:")
-#                print(self.cutting_vector_points)
+            ray_origins=np.array([ray.p[0],ray.p[1],ray.p[2]]);
+            ray_origins=ray_origins.reshape((1,3));
+            ray_directions=np.array([ray.v[0],ray.v[1],ray.v[2]]);
+            ray_directions=ray_directions.reshape((1,3));
+            #use ray.intersects_location() in trimesh to find intersection
+            locations, index_ray, index_tri = self.model.ray.intersects_location(ray_origins=ray_origins, ray_directions=ray_directions, multiple_hits=False)
+            #record points and iInfo if there is intersection
+            if index_tri.shape[0]>0:
+                iInfo_temp.icoordinate=euclid.Point3(locations[0,0],locations[0,1],locations[0,2]);
+                iInfo_temp.triangleID=index_tri[0];
+                iInfo_temp.normal=euclid.Vector3(self.model.face_normals[index_tri,0],self.model.face_normals[index_tri,1],self.model.face_normals[index_tri,2]);
+            
+                if len(self.iInfos_new)>0:
+                    self.connect(self.iInfos_new[-1],iInfo_temp);
+                self.iInfos_new.append(iInfo_temp);
+                if self.points_new is None:
+                    self.points_new=locations;
+                else:
+                    self.points_new=np.concatenate((self.points_new,locations));
+        
     
     def line_intersect(self,ray1,ray2):
         """
@@ -339,24 +329,33 @@ class Ray_cast(object):
         #pass
 #        colors=np.random.uniform(size=points.shape);
 #        temp=pyrender.Mesh.from_points(points,colors=colors);
-                
-        #create point_mesh
-        tfs = np.tile(np.eye(4), (len(self.points), 1, 1));
-        tfs[:,:3,3] = self.points;
-        point_mesh = pyrender.Mesh.from_trimesh(sm, poses=tfs);
-        point_mesh.name="point_mesh";
-        
-        #create cutting_vector_mesh
-        if self.end:
-            cutting_vector_mesh=pyrender.Primitive(positions=self.cutting_vector_points_by_mean,mode=1);
-            cutting_vector_mesh = pyrender.Mesh([cutting_vector_mesh]);
-            cutting_vector_mesh.name="cutting_vector_mesh";
-            return (point_mesh,cutting_vector_mesh);
-        else:
-            if self.cutting_vector_points is not None:
-                cutting_vector_mesh=pyrender.Primitive(positions=self.cutting_vector_points,mode=1);
+        if not self.on_new_model:       
+            #create point_mesh
+            tfs = np.tile(np.eye(4), (len(self.points), 1, 1));
+            tfs[:,:3,3] = self.points;
+            point_mesh = pyrender.Mesh.from_trimesh(sm, poses=tfs);
+            point_mesh.name="point_mesh";
+            
+            #create cutting_vector_mesh
+            if self.by_mean:
+                cutting_vector_mesh=pyrender.Primitive(positions=self.cutting_vector_points_by_mean,mode=1);
                 cutting_vector_mesh = pyrender.Mesh([cutting_vector_mesh]);
                 cutting_vector_mesh.name="cutting_vector_mesh";
                 return (point_mesh,cutting_vector_mesh);
             else:
-                return (point_mesh,);
+                if self.cutting_vector_points is not None:
+                    cutting_vector_mesh=pyrender.Primitive(positions=self.cutting_vector_points,mode=1);
+                    cutting_vector_mesh = pyrender.Mesh([cutting_vector_mesh]);
+                    cutting_vector_mesh.name="cutting_vector_mesh";
+                    return (point_mesh,cutting_vector_mesh);
+                else:
+                    return (point_mesh,);
+        else:
+            #create point_mesh_new
+            tfs = np.tile(np.eye(4), (len(self.points), 1, 1));
+            tfs[:,:3,3] = self.points_new;
+            point_mesh_new = pyrender.Mesh.from_trimesh(sm, poses=tfs);
+            point_mesh_new.name="point_mesh_new";
+            return (point_mesh_new,);
+            
+                    
