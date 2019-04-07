@@ -39,13 +39,18 @@ default_mode="view";
         
 class MyViewer(pyrender.Viewer):
     def __init__(self,scene, viewport_size=None, render_flags=None, viewer_flags=None,registered_keys=None, run_in_thread=False, **kwargs):
-        self.mesh=skull_defect;
+        self.meshes=[skull_defect,implant];
         # mode: view mode and draw mode
         self.mode=default_mode;
-        #ray_casting
-        self.ray_casting=Ray_cast(self.mesh);
+        #create self.ray_casting, set self.current_ray_casting
+        self.ray_casting=[];
+        for i in range(len(self.meshes)):    
+            self.ray_casting.append(Ray_cast(self.meshes[i]));
+        self.ray_casting_id=0;
+        self.current_ray_casting=self.ray_casting[self.ray_casting_id];
+        
         #my nodes for visualization
-        self.nodes={"point_mesh":None,"cutting_vector_mesh":None};
+        self.nodes={"point_mesh":None,"cutting_vector_mesh":None,"point_mesh_new":None};
 #        self.point_mesh_node=None;
 #        self.cutting_vector_mesh_node=None;
         #keep ray_casting as previous one
@@ -61,12 +66,25 @@ class MyViewer(pyrender.Viewer):
         if symbol==pyglet.window.key.F2:
             self.mode="draw";
             print("==========draw mode==========")
-        # press F3 key to find cutting vector by mean vector
+
+#        # press F3 key to switch self.current_ray_casting
+#        if symbol==pyglet.window.key.F3:
+#            self.ray_casting_id+=1;
+#            self.current_ray_casting=self.ray_casting[self.ray_casting_id%len(self.ray_casting)];
+        
+        # press F3 key to switch mesh model in self.current_ray_casting
         if symbol==pyglet.window.key.F3:
-            self.ray_casting.end=True;
-            self.ray_casting.find_CuttingVectorByMean();
+            self.ray_casting_id+=1;
+            self.current_ray_casting.model=self.meshes[self.ray_casting_id%len(self.ray_casting)];
+            self.current_ray_casting.on_new_model=not self.current_ray_casting.on_new_model; 
+            print("==========switch mesh model==========")
+            
+        # press F4 key to find cutting vector by mean vector
+        if symbol==pyglet.window.key.F4:
+            self.current_ray_casting.by_mean=True;
+            self.current_ray_casting.find_CuttingVectorByMean();
             #get mesh from ray_casting
-            meshes=self.ray_casting.draw();
+            meshes=self.current_ray_casting.draw();
             #update scene
             self.update_scene(meshes);
             #reassign self.pointmesh_node
@@ -74,14 +92,17 @@ class MyViewer(pyrender.Viewer):
             
             print("==========find cutting vectors by mean vector==========")
                 
-        # press F4 to keep intersection info
-        if symbol==pyglet.window.key.F4:
-            self.keep=True;
-            print("==========keep previous ray casting==========")
         # press F5 to find intersections on new model
         if symbol==pyglet.window.key.F5:
-            self.ray_casting.intersect_on_new_model();
+            self.current_ray_casting.intersect_on_new_model();
+            #get mesh from ray_casting
+            meshes=self.current_ray_casting.draw();
+            #update scene
+            self.update_scene(meshes);
+            #reassign self.pointmesh_node
+            self.find_node();
             print("==========find intersection on new model==========")
+        
         # press F6 to make implant_mesh invisible
         if symbol==pyglet.window.key.F6:
             nodes_list=list(self.scene.nodes);
@@ -118,15 +139,15 @@ class MyViewer(pyrender.Viewer):
             #reshape and pass two matrices to ray_casting
             M_proj=M_proj.T.reshape(16);
             M_modelview_inversed =M_modelview_inversed.T.reshape(16);
-            ray=self.ray_casting.build_ray(x,y,buttons,w,h,M_proj, M_modelview_inversed);
+            ray=self.current_ray_casting.build_ray(x,y,buttons,w,h,M_proj, M_modelview_inversed);
             
             
-            isIntersect=self.ray_casting.intersect(ray);
+            isIntersect=self.current_ray_casting.intersect(ray);
             print(isIntersect)
             #update if isIntersect
             if isIntersect:
                 #get mesh from ray_casting
-                meshes=self.ray_casting.draw();
+                meshes=self.current_ray_casting.draw();
                 #update scene
                 self.update_scene(meshes);
             #reassign self.pointmesh_node
