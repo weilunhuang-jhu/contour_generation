@@ -22,7 +22,7 @@ skull_defect = trimesh.load_mesh('./obj/skull_defect_old.obj');
 implant=trimesh.load_mesh('./obj/implant_old.obj');
 
 mesh_skull_defect = pyrender.Mesh.from_trimesh(skull_defect);
-mesh_implant=pyrender.Mesh.from_trimesh(skull_defect);
+mesh_implant=pyrender.Mesh.from_trimesh(implant);
 
 scene = pyrender.Scene();
 camera = pyrender.PerspectiveCamera(yfov=1.0);
@@ -32,7 +32,7 @@ camera_pose=np.array([
     [0.0,  0,   1.0,   5],
     [0.0,  0.0, 0.0, 1.0] ])
 scene.add(mesh_skull_defect, name="skull_defect_mesh");
-#scene.add(mesh_implant, name="implant_mesh");
+scene.add(mesh_implant, name="implant_mesh");
 scene.add(camera,pose=camera_pose,name="mycamera");
 
 default_mode="view";
@@ -45,7 +45,7 @@ class MyViewer(pyrender.Viewer):
         #ray_casting
         self.ray_casting=Ray_cast(self.mesh);
         #my nodes for visualization
-        self.nodes={"point_mesh_node":None,"cutting_vector_mesh_node":None};
+        self.nodes={"point_mesh":None,"cutting_vector_mesh":None};
 #        self.point_mesh_node=None;
 #        self.cutting_vector_mesh_node=None;
         #keep ray_casting as previous one
@@ -82,10 +82,19 @@ class MyViewer(pyrender.Viewer):
         if symbol==pyglet.window.key.F5:
             self.ray_casting.intersect_on_new_model();
             print("==========find intersection on new model==========")
-        # press F6 to make mesh invisible
+        # press F6 to make implant_mesh invisible
         if symbol==pyglet.window.key.F6:
-            
-            print("==========F6 pressed==========")
+            nodes_list=list(self.scene.nodes);
+            for i in range(len(nodes_list)):
+                if nodes_list[i].name=="implant_mesh":
+                    nodes_list[i].mesh.is_visible=not nodes_list[i].mesh.is_visible; 
+        # press F7 to make skull_defect_mesh invisible
+        if symbol==pyglet.window.key.F7:
+            nodes_list=list(self.scene.nodes);
+            for i in range(len(nodes_list)):
+                if nodes_list[i].name=="skull_defect_mesh":
+                    nodes_list[i].mesh.is_visible=not nodes_list[i].mesh.is_visible; 
+        
         
         # press F10 to print info
         if symbol==pyglet.window.key.F10:
@@ -144,8 +153,8 @@ class MyViewer(pyrender.Viewer):
         #iterate and add meshes to scene
         for i in range(len(meshes)):
             temp_mesh=meshes[i];
-            if self.nodes[temp_mesh.name+'_node'] is not None:
-                self.scene.remove_node(self.nodes[temp_mesh.name+'_node']);
+            if self.nodes[temp_mesh.name] is not None:
+                self.scene.remove_node(self.nodes[temp_mesh.name]);
             self.scene.add(temp_mesh,name=temp_mesh.name);
         #release lock
         self.render_lock.release();
