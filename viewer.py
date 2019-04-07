@@ -61,6 +61,31 @@ class MyViewer(pyrender.Viewer):
             self.ray_casting.end=True;
             self.ray_casting.find_CuttingVectorByMean();
             print("==========find cutting vectors by mean vector==========")
+            
+            meshes=self.ray_casting.draw();
+            point_mesh=meshes[0];
+            cutting_vector_mesh=meshes[1];                    
+            
+            #lock render, remove existing pointmesh node, add new pointmesh node, release lock 
+            self.render_lock.acquire();
+            if self.point_mesh_node is not None:
+                self.scene.remove_node(self.point_mesh_node);
+            if self.cutting_vector_mesh_node is not None:
+                self.scene.remove_node(self.cutting_vector_mesh_node);
+            self.scene.add(point_mesh,name="point_mesh");
+            self.scene.add(cutting_vector_mesh,name="cutting_vector_mesh");
+            self.render_lock.release();
+            
+            #reassign self.pointmesh_node
+            temp=list(self.scene.nodes)
+            for i in range(len(temp)):
+                if temp[i].name=="point_mesh":
+                    self.point_mesh_node=temp[i];
+                elif temp[i].name=="cutting_vector_mesh":
+                    self.cutting_vector_mesh_node=temp[i];
+            
+            
+                
         # press F4 to keep intersection info
         if symbol==pyglet.window.key.F4:
             self.keep=True;
@@ -121,8 +146,8 @@ class MyViewer(pyrender.Viewer):
                     self.render_lock.release();
             
                 elif len(meshes)==2:
-                    print("===============")
-                    print("cutting vector found")
+#                    print("===============")
+#                    print("cutting vector found")
                     point_mesh=meshes[0];
                     cutting_vector_mesh=meshes[1];                    
                     #lock render, remove existing pointmesh node, add new pointmesh node, release lock 

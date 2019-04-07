@@ -34,7 +34,7 @@ class Ray_cast(object):
         self.points=None;
         self.cutting_vector_points=None;#consists of pairs of point and cut_end point
         #self.cutting_vector_points_by_center=[];
-        self.cutting_vector_points_by_mean=[];
+        self.cutting_vector_points_by_mean=None;
         self.iInfos=[];
         self.prev_iInfos=[];
         self.cutting_vector_length=20;
@@ -185,8 +185,15 @@ class Ray_cast(object):
             mean_vector_proj.normalize();
             self.iInfos[i].cutting_vector=mean_vector_proj;
             cut_end=iInfo.icoordinate+mean_vector_proj*self.cutting_vector_length;
-            self.cutting_vector_points_by_mean.extend((iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]));
-            self.cutting_vector_points_by_mean.extend((cut_end[0],cut_end[1],cut_end[2]));
+            pairs=np.array([[self.iInfos[i].icoordinate[0],self.iInfos[i].icoordinate[1],self.iInfos[i].icoordinate[2]],\
+                            [cut_end[0],cut_end[1],cut_end[2]]]).reshape((2,3));
+    
+            if self.cutting_vector_points_by_mean is None:
+                self.cutting_vector_points_by_mean=pairs;
+            else:
+#                print(self.cutting_vector_points_by_mean.shape);
+#                print(pairs.shape)
+                self.cutting_vector_points_by_mean=np.concatenate((self.cutting_vector_points_by_mean,pairs));
             
     def find_CuttingVectors(self):
         """
@@ -207,8 +214,8 @@ class Ray_cast(object):
             if self.cutting_vector_points is None:
                 self.cutting_vector_points=pairs;
             else:
-                print(self.cutting_vector_points.shape);
-                print(pairs.shape)
+#                print(self.cutting_vector_points.shape);
+#                print(pairs.shape)
                 self.cutting_vector_points=np.concatenate((self.cutting_vector_points,pairs));
                 
             
@@ -340,11 +347,16 @@ class Ray_cast(object):
         point_mesh.name="point_mesh";
         
         #create cutting_vector_mesh
-        
-        if self.cutting_vector_points is not None:
-            cutting_vector_mesh=pyrender.Primitive(positions=self.cutting_vector_points,mode=1);
+        if self.end:
+            cutting_vector_mesh=pyrender.Primitive(positions=self.cutting_vector_points_by_mean,mode=1);
             cutting_vector_mesh = pyrender.Mesh([cutting_vector_mesh]);
             cutting_vector_mesh.name="cutting_vector_mesh";
             return (point_mesh,cutting_vector_mesh);
         else:
-            return (point_mesh,);
+            if self.cutting_vector_points is not None:
+                cutting_vector_mesh=pyrender.Primitive(positions=self.cutting_vector_points,mode=1);
+                cutting_vector_mesh = pyrender.Mesh([cutting_vector_mesh]);
+                cutting_vector_mesh.name="cutting_vector_mesh";
+                return (point_mesh,cutting_vector_mesh);
+            else:
+                return (point_mesh,);
