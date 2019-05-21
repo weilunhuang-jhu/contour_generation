@@ -18,7 +18,7 @@ from camera import Camera
 from ray import IntersectionInfo
 from ray import Ray_cast
 
-skull_defect = trimesh.load_mesh('./obj/skull_defect_old.obj');
+skull_defect = trimesh.load_mesh('./obj/skull_defect_old.obj');#
 implant=trimesh.load_mesh('./obj/implant_old.obj');
 
 mesh_skull_defect = pyrender.Mesh.from_trimesh(skull_defect);
@@ -32,7 +32,7 @@ camera_pose=np.array([
     [0.0,  0,   1.0,   5],
     [0.0,  0.0, 0.0, 1.0] ])
 scene.add(mesh_skull_defect, name="skull_defect_mesh");
-scene.add(mesh_implant, name="implant_mesh");
+#scene.add(mesh_implant, name="implant_mesh");
 scene.add(camera,pose=camera_pose,name="mycamera");
 
 default_mode="view";

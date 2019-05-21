@@ -9,6 +9,7 @@ import euclid
 import numpy as np
 import trimesh
 import pyrender
+import time
 #import networkx as nx
 from intersection_info import IntersectionInfo
 
@@ -241,13 +242,30 @@ class Ray_cast(object):
                 iInfo.icoordinate=iInfo_temp.icoordinate;
                 ray_id=i;
         #find next triangleID
+        #speed up by finding edge, and then faces sharing same edge
         triangle=self.model.faces[iInfo.triangleID];
-        for i,tri_temp in enumerate(self.model.faces):
+        
+        #find adjacency faces of iInfo triangle 
+        adjs, mask=np.where(self.model.face_adjacency==iInfo.triangleID);
+        mask=(mask==0)*1;
+        
+        for i, row in enumerate(adjs):
             #find triangle that consists of two vertice to build ray
             #and find triangle whose ID is not yet in triangle_dic
-            if triangle[ray_id] in tri_temp and triangle[(ray_id+1)%3] in tri_temp and i not in triangle_dic:
-                iInfo.triangleID=i;
+            face_id=self.model.face_adjacency[row,mask[i]];
+            tri_temp=self.model.faces[face_id];
+            if triangle[ray_id] in tri_temp and triangle[(ray_id+1)%3] in tri_temp and face_id not in triangle_dic:
+                iInfo.triangleID=face_id;
+                print('face_id')
+                print(face_id);
                 break;
+        
+#        for i,tri_temp in enumerate(self.model.faces):
+#            #find triangle that consists of two vertice to build ray
+#            #and find triangle whose ID is not yet in triangle_dic
+#            if triangle[ray_id] in tri_temp and triangle[(ray_id+1)%3] in tri_temp and i not in triangle_dic:
+#                iInfo.triangleID=i;
+#                break;
         return (t,ray_id);
             
     def connect(self,iInfo_start,iInfo_end):
@@ -272,7 +290,7 @@ class Ray_cast(object):
 #        print("faces")
 #        print(self.model.faces)
 #        print(self.model.faces.shape)
-        
+        start_time=time.time();
         while(iInfo.triangleID!=iInfo_end.triangleID):
             
             triangle_dic[iInfo.triangleID]=counter;
@@ -331,6 +349,9 @@ class Ray_cast(object):
                 self.iInfos_new.append(iInfoTemp);
                 new_point=np.array([iInfo.icoordinate[0],iInfo.icoordinate[1],iInfo.icoordinate[2]]).reshape((1,3));
                 self.points_new=np.concatenate((self.points_new,new_point));
+        end_time=time.time();
+        duration=end_time-start_time;
+        print(str(duration)+' used for '+str(counter)+ ' connecting points');
     def spline(self):
         pass;    
     def draw(self):
