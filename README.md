@@ -2,16 +2,32 @@
 ## Project Description
 
 * A simple interactive application to allow user to choose arbitrary points on a mesh model with mouse
-* Aims to generate contour of defected area of skull mesh
+* Aims to generate contour of defected area on a skull mesh
 
 ## Dependencies
 * python3
-* pyglet
+* [trimesh](https://github.com/mikedh/trimesh)
+```
+conda install -c conda-forge trimesh
+```
 
-  <https://pyglet.readthedocs.io/en/pyglet-1.3-maintenance/>
-* pyeuclid
+* [pyrender](https://github.com/mmatl/pyrender)
+```
+pip install pyrender
+```
 
-  <https://github.com/ezag/pyeuclid>
+* rtree
+```
+conda install -c conda-forge rtree 
+```
+* [pyglet](https://pyglet.readthedocs.io/en/pyglet-1.3-maintenance/)
+
+```
+conda install -c conda-forge trimesh
+```
+
+* [pyeuclid](https://github.com/ezag/pyeuclid)
+
 
 ## Usage
 
@@ -22,39 +38,12 @@ with your **.obj** files in **/obj** folder and **/obj** should be at the same f
 
 * In view mode:
 
-  1. mouse scroll for zoom in and out
- 
-  2. mouse left for camera translation
- 
-  3. mouse right for camera rotation
-
+  to do
 * In draw mode:
  
-  mouse press to choose arbitrary points on mesh model (if intersection exists between mesh model surface and ray emitted from your mouse position ), currently with functions to **find connecting points** and **find cutting vectors**
-
+  to do
 
   
 
 ## File Description
-* obj_model.py:
- 
-  load OBJ file and generate model object with vertices, normals, surfaces, texture coordinates information 
-
-* camera.py:
- 
-  camera setting for application window
-
-* triangle.py:
-
-  triangle class, used for ray-plane intersection
-
-* intersection_info.py
-
-  IntersectionInfo class, used to store information of intersection
-* ray.py: 
-  
-  do ray casting to find intersection bewteen mesh surface and ray emitted from mouse position
-
-* viewer.py:
- 
-  application window
+to do
